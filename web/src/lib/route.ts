@@ -174,6 +174,17 @@ export class Router {
     return { dist, prev };
   }
 
+  /** Every dry gathering point reachable on foot from a point, nearest walk first (one search for all of them). */
+  reachable(lon: number, lat: number, riseDm: number, places: Place[], observed: Closed = new Set(), noStairs = false): { place: Place; meters: number; minutes: number }[] {
+    const { dist } = this.dijkstra(this.nearest(lon, lat), riseDm, observed, noStairs);
+    return places
+      .filter((p) => p.kind === "gather" && p.block > riseDm + DRY_MARGIN_DM)
+      .map((p) => ({ place: p, meters: dist[this.nearest(p.lon, p.lat)] }))
+      .filter((x) => isFinite(x.meters))
+      .sort((a, b) => a.meters - b.meters)
+      .map((x) => ({ ...x, minutes: x.meters / WALK_MPS / 60 }));
+  }
+
   /** Route from a point to the nearest gathering point that stays dry at this rise; `noStairs` skips mapped staircases. */
   plan(lon: number, lat: number, riseDm: number, places: Place[], observed: Closed = new Set(), noStairs = false): Plan | null {
     const src = this.nearest(lon, lat);
