@@ -2,7 +2,7 @@
 import type { Feature } from "../../core/app";
 import { $, catOf } from "../../core/util";
 import { DRY_MARGIN_DM } from "../../lib/route";
-import { screenReaderMode, setScreenReaderMode } from "../../lib/speech";
+import { announce, screenReaderMode, setScreenReaderMode } from "../../lib/speech";
 import "./style.css";
 
 type Option = { key: "noStairs" | "readAloud" | "screenReader"; label: string; desc: string };
@@ -13,12 +13,13 @@ const OPTIONS: Option[] = [
 ];
 const SIZES = [["", "Default"], ["text-md", "Medium"], ["text-lg", "Large"]] as const;
 
+let lastHeadline = "";
+
 const feature: Feature = {
   id: "student",
   init(app) {
     const now = document.createElement("div");
     now.id = "now-body";
-    now.setAttribute("role", "status");
     app.headerNow(now);
     app.card({ student: "right", studentOrder: 10, order: 0, id: "access-card", title: "Accessibility", html: `
       <div class="small muted">Text size</div>
@@ -84,6 +85,9 @@ const feature: Feature = {
     const ml = app.maybe("mlForecast")?.();
     const forecast = whatIf ? "Scenario, not the live river"
       : ml && !ml.error ? `ML forecast: ${ml.predictions.map((p) => `+${p.h} h ${p.ft.toFixed(1)}`).join(" · ")} ft` : "ML forecast unavailable";
+    // Tell screen readers when the situation changes category, not every redraw (the Ida replay redraws 4 times a second).
+    if (lastHeadline && headline !== lastHeadline) announce(headline);
+    lastHeadline = headline;
     el.innerHTML = `<b>${headline}</b> <span class="muted">· ${detail}</span><div class="now-ml mono">${forecast}</div>`;
   },
 };

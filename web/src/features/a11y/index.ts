@@ -1,6 +1,6 @@
 /**
  * Screen-reader support for blind and low-vision users (VoiceOver, TalkBack, NVDA, JAWS):
- * - "Map in words": everything the map shows, as text, first in the reading order.
+ * - "Flood situation": what the map shows, as text, for screen readers only (visually hidden), right after Get me to safety.
  * - Screen-reader mode lives in the student Accessibility panel; speech.ts does the hand-off.
  * - Skip links, a page heading, and every panel exposed as a named region, so users can jump instead of swiping.
  */
@@ -23,26 +23,19 @@ function summary(f: Facts) {
   return { level, cat, roads, alerts: f.nws_alerts ?? [], dry: f.gathering_points_dry ?? [], route: f.route ?? null };
 }
 
-/** One short paragraph for "Read this aloud". */
-function spoken(f: Facts) {
-  const s = summary(f);
-  const parts = [`${f.scenario === "live" ? "Right now" : `In the ${f.scenario}`}, the Raritan River is at ${s.level}: ${s.cat}.`];
-  parts.push(s.roads.length ? `Roads closed to walking: ${s.roads.slice(0, 5).join(", ")}${s.roads.length > 5 ? `, and ${s.roads.length - 5} more` : ""}.` : "No roads are closed to walking.");
-  if (s.alerts.length) parts.push(`Weather alerts: ${s.alerts.join(", ")}.`);
-  parts.push(s.route ? `Your route: walk to ${s.route.to}, about ${s.route.minutes} minutes.` : "To get directions, choose where you are under Where do I go.");
-  return parts.join(" ");
-}
-
+let shown = "";
 function render(app: App) {
   const f = app.facts() as Facts, s = summary(f);
-  $("words-body").innerHTML = `
+  const html = `
     <h3>River</h3><p>${esc(f.scenario === "live" ? "Live" : f.scenario)}: Raritan River at ${esc(s.level)}, <b>${esc(s.cat)}</b>. Flooding starts at ${esc(f.flood_stage_ft ?? 28)} feet.</p>
     <h3>Roads closed to walking${s.roads.length >= 8 ? " (main roads)" : ` (${s.roads.length})`}</h3>${list(s.roads, "None.")}
     <h3>Weather alerts (${s.alerts.length})</h3>${list(s.alerts, "None.")}
     <h3>Dry gathering points (${s.dry.length})</h3>${list(s.dry, "None reachable. Move to the highest floor you can and call 911.")}
     <h3>Your route</h3>${s.route
       ? `<p>To <b>${esc(s.route.to)}</b>, about ${esc(s.route.minutes)} minutes on foot.</p><ol>${s.route.steps.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>`
-      : `<p>No route yet. <a href="#guide-card">Choose where you are</a>, then press Guide me.</p>`}`;
+      : `<p>No route yet. Press Get me to safety, or choose where you are under Where do I go.</p>`}`;
+  // only touch the DOM when the words change: replacing it under VoiceOver's cursor makes it jump
+  if (html !== shown) $("words-body").innerHTML = shown = html;
 }
 
 const DEMO_START = "Scott Hall";
@@ -91,26 +84,27 @@ const feature: Feature = {
     const safe = document.createElement("button");
     safe.id = "btn-safety";
     safe.className = "btn safety-btn";
-    safe.dataset.views = "student";   // admins act on the dashboard, not a route
     safe.setAttribute("aria-describedby", "btn-safety-help");
     safe.innerHTML = `<span aria-hidden="true">🆘</span> <span id="btn-safety-label">Get me to safety</span>
       <span id="btn-safety-help" class="sr-only">Uses your location, finds the nearest dry building and reads the walking route aloud.</span>`;
     safe.onclick = () => void getMeToSafety(app, safe);
-    document.querySelector("header.top")!.prepend(safe);
+    // Student view: the button and the river status open the left column; admins keep the status in the header.
+    app.card({ student: "left", studentOrder: 1, order: 0, id: "now-card", title: "Right now", html: `<div id="now-slot"></div>` });
+    $("now-card").prepend(safe);
 
     // Skip links that appear on keyboard focus (the header already has the page's h1).
     // Skip links come right after the safety button in the reading order.
     document.querySelector("header.top")!.insertAdjacentHTML("afterend", `
       <nav class="skip-links" aria-label="Skip links" data-views="student">
-        <a class="skip" href="#words-card">Skip to the map in words</a>
+        <a class="skip" href="#words-card">Skip to the flood situation</a>
         <a class="skip" href="#guide-card">Skip to Where do I go?</a>
       </nav>`);
 
-    app.card({ student: "left", studentOrder: 2, id: "words-card", title: "Map in words", order: 5, html: `
-      <button id="words-read" class="btn">🔊 Read this aloud</button>
+    // Screen readers only: sighted students have the map; this is the map for everyone else.
+    const words = app.card({ student: "left", studentOrder: 2, id: "words-card", title: "Flood situation", order: 5, html: `
       <div id="words-body" class="words-body"></div>` });
 
-    $("words-read").onclick = () => void speak(spoken(app.facts() as Facts));
+    words.classList.add("sr-only");
 
     // The route is planned outside the update loop: refresh when its steps change.
     const steps = document.getElementById("g-steps");
@@ -133,6 +127,11 @@ const feature: Feature = {
     layers?.setAttribute("aria-label", "Map layers");
     render(app);
   },
-  update(app) { if (document.getElementById("words-body")) render(app); },
+  update(app) {
+    const now = $("top-now"), home = document.querySelector("header.top")!;
+    if (app.state.view === "student" && now.parentElement !== $("now-slot")) $("now-slot").append(now);
+    if (app.state.view === "admin" && now.parentElement !== home) home.append(now);
+    if (document.getElementById("words-body")) render(app);
+  },
 };
 export default feature;
