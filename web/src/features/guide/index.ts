@@ -4,7 +4,7 @@ import type { App, Feature, Pt } from "../../core/app";
 import { $, esc, fmtFt, getJson, postJson } from "../../core/util";
 import { announce } from "../../lib/speech";
 import { DRY_MARGIN_DM, type Place, type Plan } from "../../lib/route";
-import { onSpeak, speak } from "../../lib/speech";
+import { onSpeak, speak, stopSpeaking } from "../../lib/speech";
 import { NO_OBSERVATIONS } from "../roads";
 import "./style.css";
 
@@ -27,6 +27,8 @@ type Res = { script: string; by: string; check: string[]; rejected?: string; fix
 /** A gathering point the student chose instead of the nearest one; null = nearest. */
 let chosen: Place | null = null, destShown = "";
 let places: Place[] = [], starts: Start[] = [], start: Start | null = null, plan: Plan | null = null, lastScript = "", stepIdx = 0, stepsMode = "", showAll = false;
+/** Read aloud toggle: while on, each step is read once when it is shown; nothing advances on its own. */
+let readOn = false, lastRead = "";
 const KINDS = [["gather", "Help meetup spots", "#22c55e"], ["hospital", "Hospitals", "#f472b6"], ["police", "Police", "#60a5fa"], ["fire", "Fire stations", "#fb923c"]] as const;
 let marker: maplibregl.Marker | null = null;
 
@@ -86,7 +88,7 @@ const feature: Feature = {
       </div>
       <div id="guide-out" class="guide-out" hidden>
         <div class="dest" id="g-dest" tabindex="-1"></div>
-        <div class="row gap small"><button id="btn-replay" class="btn ghost small"><span aria-hidden="true">🔊</span> Read aloud</button></div>
+        <div class="row gap small"><button id="btn-replay" class="read-toggle" role="switch" aria-checked="false"><span><span aria-hidden="true">🔊</span> Read aloud</span><span class="rt-track" aria-hidden="true"><span class="rt-knob"></span></span><span class="rt-state" aria-hidden="true">OFF</span></button></div>
         <!-- spoken script, voice and AI-guard details: kept for debugging and a possible Admin view, not shown to students -->
         <blockquote id="g-script" hidden></blockquote><span id="g-voice" hidden></span><div class="badge-row" id="g-by" hidden></div>
         <ol class="steps" id="g-steps"></ol>
@@ -96,7 +98,7 @@ const feature: Feature = {
           <div class="row gap"><button id="g-prev" class="btn ghost small">Back</button><button id="g-next" class="btn small">Next direction</button></div>
         </div>
         <button id="g-all" class="link small" hidden>Show all steps</button>
-        <h3 class="dest-h" id="dest-h">Where to go</h3>
+        <h3 class="dest-h" id="dest-h">Options to go</h3>
         <ul id="dest-list" class="dest-list" aria-labelledby="dest-h"></ul>
         <div id="g-replan" class="replan" hidden>Route re-planned (river level or route options changed). <button id="btn-respeak" class="link">Hear the new route</button></div>
       </div>` });
@@ -114,7 +116,14 @@ const feature: Feature = {
     sel.onchange = () => sel.value && setStart(JSON.parse(sel.value));
     $("btn-guide").onclick = () => void (start ? run() : locateAndRun());
     $("btn-pick").onclick = () => app.pick("Click the map where you are", (pt: Pt) => setStart({ name: "Pinned location", ...pt }));
-    $("btn-replay").onclick = () => void speak(lastScript);
+    $("btn-replay").onclick = () => {
+      readOn = !readOn;
+      const b = $("btn-replay");
+      b.setAttribute("aria-checked", String(readOn));
+      b.classList.toggle("on", readOn);
+      b.querySelector(".rt-state")!.textContent = readOn ? "ON" : "OFF";
+      if (readOn) { lastRead = ""; readCurrent(); } else stopSpeaking();
+    };
     $("btn-respeak").onclick = () => void run();
     $("g-prev").onclick = () => showStep(stepIdx - 1);
     $("g-next").onclick = () => showStep(stepIdx + 1);
@@ -145,7 +154,7 @@ const feature: Feature = {
       }, 300);
     };
 
-    // Where to go: every dry gathering point, nearest walk first. The button text carries the place information.
+    // Options to go: dry gathering points within a 20-minute walk, nearest first. The button text carries the place information.
     $("dest-list").onclick = (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-dest]");
       if (!b) return;
@@ -265,6 +274,16 @@ const feature: Feature = {
       stepIdx = Math.max(0, Math.min(plan.steps.length - 1, i));
       $("g-steplbl").textContent = `STEP ${stepIdx + 1} OF ${plan.steps.length}`;
       $("g-steptext").textContent = plan.steps[stepIdx].say;
+      readCurrent();
+    }
+    /** With Read aloud on: say the step on screen once (or the one message when there is no walk). */
+    function readCurrent() {
+      if (!readOn) return;
+      const text = plan ? (plan.here ? plan.steps[0].say : `Step ${stepIdx + 1} of ${plan.steps.length}. ${plan.steps[stepIdx].say}`) : lastScript;
+      const key = `${plan?.dest.name ?? "none"}|${stepIdx}|${text}`;
+      if (!text || key === lastRead) return;
+      lastRead = key;
+      void speak(text);
     }
     renderStepsRef = renderSteps;
 
@@ -303,6 +322,7 @@ const feature: Feature = {
         `<span class="badge">${scenario}</span>`,
       ].join("");
       lastScript = res.script;
+      if (!p) readCurrent();   // shelter in place: the fixed message is the only thing to read
       btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Route from this place`;
       // Nothing is spoken automatically: the student presses Read aloud. (`silent` stays for callers like the voice agent.)
       return { script: res.script, plan: p };
