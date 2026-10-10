@@ -28,3 +28,12 @@
 .alerts li.alert.Severe, .alerts li.alert.Extreme { border-color: var(--bad); }
 .top-river { display: inline-flex; align-items: center; gap: 10px; }
 .top-river #top-stage { font-weight: 700; color: var(--text); }
+.lvl { margin: 10px 0 2px; }
+.lvl-track { position: relative; height: 10px; border-radius: 99px; overflow: visible; background: var(--panel-2); }
+.lvl-track i { position: absolute; top: 0; bottom: 0; opacity: .75; }
+.lvl-track i:first-child { border-radius: 99px 0 0 99px; } .lvl-track i:last-of-type { border-radius: 0 99px 99px 0; }
+.lvl-mark { position: absolute; top: -4px; width: 4px; height: 18px; margin-left: -2px; background: #fff; border-radius: 2px; box-shadow: 0 0 0 2px var(--panel); }
+.lvl-labels { position: relative; height: 14px; margin-top: 3px; font-size: 10px; color: var(--muted); }
+.lvl-labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.impacts-box { margin-top: 8px; font-size: 12px; }
+.impacts-box summary { cursor: pointer; color: var(--muted); }
