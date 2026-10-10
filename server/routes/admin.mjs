@@ -32,14 +32,15 @@ export default function register(api, ctx) {
       outlookFrom = g.forecastIssued ? `NWS forecast issued ${g.forecastIssued}` : "NWS forecast";
     }
     const peak = outlook?.length ? outlook.reduce((a, b) => (b[1] > a[1] ? b : a)) : null;
-    const sensors = ctx.sensors?.list() ?? [], reports = ctx.detect?.listReports() ?? [];
+    const sensors = ctx.sensors?.list() ?? [], reports = ctx.detect?.listReports() ?? [], dispatches = ctx.dispatch?.list() ?? [];
     send(res, 200, {
       scenario: { mode, stage_ft: stageFt, outlook_from: outlookFrom, outlook_until: outlook?.at(-1)?.[0] ?? null, peak: peak && { ft: peak[1], at: peak[0] } },
       buildings: rankBuildings(buildings, stageFt, outlook),
       roads: roadTimeline(roads, stageFt, outlook, mode === "live" ? sensors : []),
-      feed: feed({ alerts: now.alerts, sensors, reports,
+      feed: feed({ alerts: now.alerts, sensors, reports, dispatches,
         forecastPeak: g?.forecastSeries?.length ? { ft: Math.max(...g.forecastSeries.map((p) => p[1])), issued: g.forecastIssued } : null }),
       review: reviewQueue(reports),
+      dispatch: dispatches.filter((d) => d.status !== "cleared" || Date.now() - Date.parse(d.history.at(-1).at) < 3600e3),
       sensors: sensors.map((s) => ({ id: s.id, name: s.name, road: s.road, status: s.status, stale: s.stale, depth_cm: s.reading?.depth_cm ?? null, time: s.reading?.time ?? null })),
     });
   });
