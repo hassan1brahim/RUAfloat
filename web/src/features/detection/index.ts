@@ -4,7 +4,7 @@ import type { Feature, Pt } from "../../core/app";
 import { $, esc, et, getJson, postJson } from "../../core/util";
 import { observe, shrinkPhoto, type Camera, type CameraCheck, type Report, type ReportStatus, type Sensor } from "./observe";
 import "./style.css";
-import { bestPosition } from "../../lib/locate";
+import { bestPosition, locateError } from "../../lib/locate";
 
 let reports: Report[] = [], sensors: Sensor[] = [], cameras: Camera[] = [];
 let statuses = new Map<string, ReportStatus>();
@@ -59,7 +59,7 @@ const feature: Feature = {
       $("r-loc").textContent = "Finding your location…";
       const f = await bestPosition();
       if (f) setLoc(`GPS, within ${Math.round(f.accuracy)} m`, { lon: f.lon, lat: f.lat });
-      else $("r-loc").textContent = "Couldn't get your location: use Pick on map.";
+      else $("r-loc").textContent = locateError || "Couldn't get your location: use Pick on map.";
     };
     send.onclick = async () => {
       send.disabled = true; send.textContent = "Checking photo…";

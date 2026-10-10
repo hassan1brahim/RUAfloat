@@ -1,0 +1,57 @@
+/* Phone layout. Everything is scoped to body.m (set by the mobile feature at ≤ 1000 px); desktop is untouched. */
+:root { --nav-h: calc(60px + env(safe-area-inset-bottom)); --peek-h: 74px; }
+.sheet, .bottom-nav { display: none; }
+
+body.m { height: 100dvh; overflow: hidden; padding-bottom: 0; overscroll-behavior: none; }   /* only the map moves: no page bounce or pull-to-refresh while panning */
+
+/* header: logo, name, Live/What-if on one row; the status line under it; the view switch moves to the bottom bar */
+body.m .top { grid-template-columns: 1fr; gap: 4px; padding: 8px max(12px, env(safe-area-inset-left)); }
+body.m .top-center { display: none; }
+body.m .top-left { gap: 10px; }
+body.m .top-right { justify-self: stretch; align-items: flex-start; text-align: left; font-size: 12px; }
+body.m .whatif-bar { display: none; }
+
+/* the map fills everything between the header and the bottom bar */
+body.m .layout { flex: 1; min-height: 0; display: block; position: relative; height: auto; }
+body.m .mapwrap { position: absolute; inset: 0; height: auto; min-height: 0; }
+body.m .maplibregl-ctrl-bottom-right, body.m .maplibregl-ctrl-bottom-left { bottom: calc(var(--nav-h) + var(--peek-h)); }
+
+/* Layers and Legend: two small buttons that open on tap */
+body.m .map-layers { top: 8px; right: 8px; bottom: auto; left: auto; padding: 6px 10px; }
+body.m .legend { top: 60px; right: 8px; bottom: auto; left: auto; max-width: calc(100% - 16px); padding: 6px 10px; }
+body.m .map-layers[open], body.m .legend[open] { max-height: 34dvh; overflow: auto; z-index: 5; }
+body.m .map-hint { top: auto; bottom: calc(var(--nav-h) + var(--peek-h) + 72px); left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* main action above the panel: Route me to safety (Student) */
+body.m .go-fab { display: block; position: fixed; left: 12px; right: 12px; bottom: calc(var(--nav-h) + var(--peek-h) + 10px); z-index: 50; min-height: 52px; font-size: 16px; box-shadow: 0 6px 24px rgba(0, 0, 0, .5); }
+body.m .go-fab[hidden], body.m[data-view="admin"] .go-fab, body.m[data-sheet="half"] .go-fab, body.m[data-sheet="full"] .go-fab { display: none; }
+/* scenario controls above the panel (Admin, What-if on) */
+body.m[data-view="admin"] .whatif-bar:not([hidden]) { display: flex; position: fixed; left: 8px; right: 8px; bottom: calc(var(--nav-h) + var(--peek-h) + 8px); z-index: 54; max-height: 38dvh; overflow: auto; border: 1px solid #3b2a63; border-radius: 12px; padding: 10px 12px; gap: 8px 12px; }
+body.m[data-sheet="half"] .whatif-bar, body.m[data-sheet="full"] .whatif-bar { display: none !important; }
+
+/* expandable bottom panel */
+body.m .sheet { display: flex; flex-direction: column; position: fixed; left: 0; right: 0; bottom: var(--nav-h); z-index: 55; height: var(--peek-h);
+  background: var(--panel); border: 1px solid var(--line); border-bottom: 0; border-radius: 16px 16px 0 0; box-shadow: 0 -8px 24px rgba(0, 0, 0, .45); transition: height .22s ease; overflow: hidden; }
+/* half: as tall as its content, at most ~40% of the screen, so the map stays visible */
+body.m .sheet[data-state="half"] { height: auto; max-height: 42dvh; }
+body.m .sheet[data-state="full"] { height: calc(100dvh - var(--nav-h) - 56px); }
+body.m .sheet[data-state="full"] .sheet-body { flex: 1; }
+.sheet-handle { flex: none; height: 22px; display: flex; align-items: center; justify-content: center; background: none; border: 0; cursor: pointer; }
+.sheet-handle i { display: block; width: 40px; height: 5px; border-radius: 3px; background: #3a4a5c; }
+.sheet-tabs { flex: none; display: flex; gap: 6px; padding: 0 12px 10px; overflow-x: auto; }
+.sheet-tabs button { flex: 1 0 auto; min-height: 40px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); font: 600 13px Inter, sans-serif; cursor: pointer; }
+.sheet-tabs button[aria-selected="true"] { background: #1d2a38; border-color: #2f4256; color: #fff; }
+.sheet-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); }
+body.m .sheet[data-state="peek"] .sheet-body { visibility: hidden; }
+body.m .sheet-body .col { display: flex; flex-direction: column; gap: 12px; padding: 0; border: 0; overflow: visible; height: auto; }
+body.m .sheet-body .col:empty { display: none; }
+body.m .card.tab-off { display: none !important; }
+#details-card h2 { align-items: center; }
+
+/* fixed bottom bar: Student | Admin */
+body.m .bottom-nav { display: grid; grid-template-columns: 1fr 1fr; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; height: var(--nav-h);
+  padding-bottom: env(safe-area-inset-bottom); background: var(--panel); border-top: 1px solid var(--line); }
+.bottom-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: 0; color: var(--muted); font: 600 12px Inter, sans-serif; cursor: pointer; min-height: 48px; }
+.bottom-nav svg { width: 56px; height: 28px; padding: 3px 0; border-radius: 99px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.bottom-nav button.on { color: #fff; }
+.bottom-nav button.on svg { background: #1d2a38; stroke: var(--water); }

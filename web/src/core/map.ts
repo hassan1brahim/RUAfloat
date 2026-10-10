@@ -9,8 +9,8 @@ export function createMap(): Promise<MLMap> {
     style: "https://tiles.openfreemap.org/styles/dark",
     center: CAMPUS_CENTER, zoom: 13.4, pitch: 45, bearing: -20,
     maxBounds: [[-74.59, 40.39], [-74.32, 40.61]],
-    // phones: one finger scrolls the page, two fingers move the map
-    cooperativeGestures: matchMedia("(pointer: coarse)").matches,
+    // like a maps app: one finger pans, pinch zooms, two-finger twist rotates (on phones the map is the whole screen)
+    cooperativeGestures: false,
     attributionControl: { compact: true, customAttribution: "Elevation: USGS 3DEP via AWS Terrain Tiles · River data: NWS/USGS" },
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");

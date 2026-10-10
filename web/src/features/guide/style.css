@@ -1,6 +1,7 @@
 .guide-out { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
-.dest { font-weight: 600; font-size: 15px; }
-.dest small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+.dest { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+.dest.here { color: var(--ok); }
+.dest.danger { color: var(--bad); }
 blockquote { margin: 10px 0; padding: 10px 12px; background: #0b1a26; border-left: 3px solid var(--water); border-radius: 6px; font-size: 14px; }
 blockquote.danger { background: #250b0e; border-color: var(--bad); }
 .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; font-size: 11px; }
@@ -20,27 +21,45 @@ blockquote.danger { background: #250b0e; border-color: var(--bad); }
 /* Get me to safety and choosing a place are one box, outlined in white */
 #guide-card { border: 2px solid #fff; }
 body[data-view="student"] .col #guide-card h2 { font-size: 16px; font-weight: 800; color: #fff; letter-spacing: 1px; margin-bottom: 12px; }
-.safety-note { margin: 6px 0 0; font-size: 12px; color: #c3cfdb; }
 .start-box { margin: 0; }
 .start-box.need { padding: 10px 12px; border: 2px solid #fde047; border-radius: 8px; background: #1c1a0b; }
 .start-msg { font-weight: 700; color: #fde047; margin-bottom: 8px; }
-.start-label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #dbe5ef; }
 .onestep { margin-top: 8px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
 .steptext { font-size: 16px; font-weight: 600; line-height: 1.35; margin: 6px 0 2px; min-height: 44px; }
-#place-q { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 13px Inter, sans-serif; }
-.place-results { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.place-results .btn { width: 100%; text-align: left; }
-.dest-h { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 14px 0 6px; }
-.dest-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.dest-btn { width: 100%; text-align: left; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; font: 13px Inter, sans-serif; }
-.dest-btn span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
-.dest-btn.on { border-color: var(--water); }
 /* Read aloud: an on/off switch */
 .read-toggle { display: inline-flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: 600 13px Inter, sans-serif; cursor: pointer; }
 .read-toggle .rt-track { position: relative; width: 36px; height: 20px; border-radius: 10px; background: #1f2b38; border: 1px solid #2f4256; transition: background .15s; }
 .read-toggle .rt-knob { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #8696a7; transition: left .15s, background .15s; }
-.read-toggle .rt-state { font: 700 11px var(--mono); min-width: 26px; color: var(--muted); }
 .read-toggle.on { border-color: #22d3ee; background: #0c2530; }
 .read-toggle.on .rt-track { background: #0e7490; border-color: #22d3ee; }
 .read-toggle.on .rt-knob { left: 18px; background: #fff; }
-.read-toggle.on .rt-state { color: #67e8f9; }
+
+/* Get me to safety, laid out like a maps app: one "from" field, then routes as rows */
+.safety-go { width: 100%; margin-bottom: 10px; }
+.safety-go[hidden] { display: none; }
+.from-row { display: flex; align-items: center; gap: 6px; }
+.from-dot { width: 12px; height: 12px; border-radius: 50%; border: 3px solid var(--scarlet); flex: none; }
+#place-q { flex: 1; min-width: 0; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font: 14px Inter, sans-serif; }
+.icon-btn { flex: none; width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font-size: 16px; cursor: pointer; }
+.place-results { list-style: none; margin: 4px 0 0 18px; padding: 0; border-radius: 8px; overflow: hidden; }
+.place-results:not(:empty) { border: 1px solid var(--line); background: var(--panel-2); }
+.place-results .hit { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--text); padding: 9px 10px; font: 13px Inter, sans-serif; cursor: pointer; }
+.place-results li:last-child .hit { border-bottom: 0; }
+.place-results .hit:hover, .place-results .hit:focus-visible { background: #1d2a38; }
+.route-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.route-row { width: 100%; display: flex; justify-content: space-between; gap: 10px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); border-left: 4px solid transparent; color: var(--text); padding: 10px 8px 10px 10px; cursor: pointer; font: 13px Inter, sans-serif; }
+.route-row.on { border-left-color: var(--water); background: #0f1e2a; }
+.route-row:hover { background: #121b25; }
+.rr-main { min-width: 0; }
+.rr-main b { display: block; font-size: 14px; }
+.rr-main span, .rr-side span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.rr-side { text-align: right; flex: none; }
+.rr-side b { font: 700 14px var(--mono); }
+.rr-side b.fast { color: var(--ok); }
+.steps-box { margin-top: 12px; }
+.steps-box[hidden] { display: none; }
+.step-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.steps-box .onestep { margin-top: 6px; }
+@media (pointer: coarse) { .icon-btn { width: 44px; height: 44px; } .place-results .hit { min-height: 44px; } }
+.route-row:focus-visible, .place-results .hit:focus-visible { outline: 3px solid #fde047; outline-offset: -3px; }
+.place-results .hit:hover .muted, .place-results .hit:focus-visible .muted { color: #a9b6c3; }
