@@ -1,7 +1,7 @@
 // River feature: Raritan gauge at Bound Brook (NWS NWPS) + active NWS alerts for New Brunswick.
 import { cached, getJson, send } from "../lib/http.mjs";
 
-async function live() {
+export async function live() {
   return cached("live", 60_000, async () => {
     const out = { fetched_at: new Date().toISOString(), sources: [] };
     try {

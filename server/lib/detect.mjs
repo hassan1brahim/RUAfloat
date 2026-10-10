@@ -146,5 +146,15 @@ Be conservative: if no reference object is visible, give a wide depth range.` },
     return r && { path: path.join(photoDir, `${r.id}.${r.ext}`), type: `image/${r.ext}` };
   };
 
-  return { cameras, checkCamera, addReport, listReports: () => reports, photo };
+  /** Admin decision on a report: confirmed closes nearby roads like a sensor would, rejected removes it as evidence. */
+  function review(id, verdict) {
+    const r = reports.find((x) => x.id === id);
+    if (!r) throw Object.assign(new Error("no such report"), { status: 404 });
+    if (!["confirmed", "rejected"].includes(verdict)) throw Object.assign(new Error("verdict must be confirmed or rejected"), { status: 400 });
+    r.review = { verdict, at: new Date().toISOString() };
+    fs.writeFileSync(reportsFile, JSON.stringify(reports, null, 1));
+    return r;
+  }
+
+  return { cameras, checkCamera, addReport, listReports: () => reports, photo, review };
 }

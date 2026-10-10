@@ -5,7 +5,7 @@ import path from "node:path";
 import { readBody, send } from "../lib/http.mjs";
 import { createSensors } from "../sensors.mjs";
 
-/** Constant-time compare; no token configured means every reading is rejected. */
+/** Constant-time compare; no token configured means every request is rejected. */
 export function tokenOk(header, token = process.env.SENSOR_TOKEN || "") {
   if (!token || typeof header !== "string") return false;
   const a = Buffer.from(header), b = Buffer.from(token);
@@ -15,6 +15,7 @@ export function tokenOk(header, token = process.env.SENSOR_TOKEN || "") {
 export default function register(api, ctx) {
   const config = JSON.parse(fs.readFileSync(path.join(ctx.server, "sensors.config.json"), "utf8"));
   const sensors = createSensors(config);
+  ctx.sensors = sensors;
   ctx.health.sensors = config.length;
   ctx.health.sensor_token = !!process.env.SENSOR_TOKEN;
   api.get("/api/sensors", async (req, res) => send(res, 200, sensors.list()));
