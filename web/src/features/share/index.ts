@@ -35,6 +35,7 @@ const feature: Feature = {
   update(app) {
     if (!ready) return;
     const q = new URLSearchParams(), river = app.get("river");
+    if (app.state.view === "admin") q.set("view", "admin");
     q.set("scenario", app.state.mode);
     if (app.state.mode === "ida") q.set("t", river.ida.series[river.idaIndex()][0].slice(0, 13));
     if (app.state.mode === "whatif") q.set("stage", app.state.stageFt.toFixed(1));

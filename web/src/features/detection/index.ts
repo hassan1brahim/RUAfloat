@@ -28,7 +28,7 @@ const feature: Feature = {
     app.card({ col: "left", id: "cams-card", title: "River cameras · AI check", order: 40,
       extraTitle: ` <a class="src" href="https://apps.usgs.gov/hivis/" target="_blank" rel="noopener">USGS HIVIS ↗</a>`, html: `<div id="cams" class="cams"><div class="muted small">Loading cameras…</div></div>` });
     app.card({ col: "left", id: "sensors-card", title: "Street sensors", order: 50, html: `<div id="sensors" class="small"><div class="muted">Loading…</div></div>` });
-    app.card({ col: "right", id: "report-card", title: "Report flooding", order: 30, html: `
+    app.card({ col: "right", student: "left", studentOrder: 20, id: "report-card", title: "Report flooding", order: 30, html: `
       <div class="small muted" id="r-loc">Location: use “📍 Pick on map” below or your GPS.</div>
       <div class="row gap"><button id="r-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button><button id="r-gps" class="btn ghost small"><span aria-hidden="true">◎</span> GPS</button></div>
       <input id="r-photo" type="file" accept="image/*" capture="environment" aria-label="Photo of the flooding" />

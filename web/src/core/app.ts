@@ -6,6 +6,7 @@ import maplibregl, { type Map as MLMap, type MapMouseEvent } from "maplibre-gl";
 import { BASE_FT, riseDmOf, $ } from "./util";
 
 export type Mode = "live" | "ida" | "whatif";
+export type View = "student" | "admin";
 export type Pt = { lon: number; lat: number };
 
 /** Each feature adds the services it provides via `declare module "../../core/app"`. */
@@ -26,17 +27,28 @@ export interface Feature {
   clickPriority?: number;
 }
 
-type CardOpts = { col: "left" | "right"; id: string; title: string; html?: string; order: number; hidden?: boolean; extraTitle?: string };
+/** `col` places the card in Admin view, `student` in Student view; a card without one is not shown in that view. */
+/** Which views show a layer checkbox or legend entry. */
+export type Views = View | "both";
+/** `key` links legend entries to the checkbox. */
+type LayerOpts = { views?: Views; key?: string };
+type CardOpts = { col?: "left" | "right"; student?: "left" | "right"; studentOrder?: number; id: string; title: string; html?: string; order: number; hidden?: boolean; extraTitle?: string };
 
 export class App {
   map!: MLMap;
-  readonly state = { mode: "live" as Mode, stageFt: BASE_FT };
   readonly params = new URLSearchParams(location.search);
+  readonly state = {
+    mode: "live" as Mode, stageFt: BASE_FT,
+    view: (this.params.get("view") === "admin" ? "admin" : "student") as View,
+    /** Student accessibility options (set by the student feature, read by the guide). */
+    access: { noStairs: false, readAloud: true },
+  };
   private svc: Partial<Services> = {};
   private picking: ((pt: Pt) => void) | null = null;
   private pending = 0;
   private started = false;   // no redraws until every feature has initialised
   private defaultHint = "Click a road for its status";
+  private keyOn = new Map<string, boolean>();
 
   constructor(private features: Feature[]) {}
 
@@ -67,29 +79,86 @@ export class App {
     const el = document.createElement("section");
     el.className = "card";
     el.id = o.id;
-    el.dataset.order = String(o.order);
+    el.dataset.colAdmin = o.col ?? "";
+    el.dataset.colStudent = o.student ?? "";
+    el.dataset.orderAdmin = String(o.order);
+    el.dataset.orderStudent = String(o.studentOrder ?? o.order);
     el.hidden = !!o.hidden;
     el.innerHTML = `<h2>${o.title}${o.extraTitle ?? ""}</h2>${o.html ?? ""}`;
-    const col = $(o.col === "left" ? "col-left" : "col-right");
-    const after = [...col.children].find((c) => Number((c as HTMLElement).dataset.order) > o.order);
-    col.insertBefore(el, after ?? null);
+    this.place(el);
     return el;
   }
 
-  /** A checkbox in the map's layer panel. */
-  toggle(label: string, layerIds: string[], on = true) {
-    const l = document.createElement("label");
-    l.innerHTML = `<input type="checkbox" ${on ? "checked" : ""} /> ${label}`;
-    l.querySelector("input")!.onchange = (e) => {
-      const v = (e.target as HTMLInputElement).checked ? "visible" : "none";
-      layerIds.forEach((id) => this.map.getLayer(id) && this.map.setLayoutProperty(id, "visibility", v));
-    };
-    $("map-layers").append(l);
-    if (!on) layerIds.forEach((id) => this.map.getLayer(id) && this.map.setLayoutProperty(id, "visibility", "none"));
+  /** Put a card in its column for the current view, or hide it if that view doesn't show it. */
+  private place(el: HTMLElement) {
+    const student = this.state.view === "student";
+    const own = student ? el.dataset.colStudent : el.dataset.colAdmin;
+    // A card this view doesn't show stays in the page (features keep updating it), just hidden.
+    const col = own || el.dataset.colAdmin || el.dataset.colStudent;
+    el.classList.toggle("off-view", !own);
+    const order = Number(student && own ? el.dataset.orderStudent : el.dataset.orderAdmin);
+    el.dataset.order = String(order);
+    const parent = $(col === "left" ? "col-left" : "col-right");
+    const after = [...parent.children].find((c) => c !== el && Number((c as HTMLElement).dataset.order) > order);
+    parent.insertBefore(el, after ?? null);
   }
 
-  legend(html: string) { $("legend").insertAdjacentHTML("beforeend", html); }
-  headerItem(el: HTMLElement) { $("top-status").append(el); }
+  setView(v: View) {
+    this.state.view = v;
+    document.body.dataset.view = v;
+    document.querySelectorAll<HTMLButtonElement>("#view-seg button").forEach((b) => {
+      b.classList.toggle("on", b.dataset.view === v);
+      b.setAttribute("aria-pressed", String(b.dataset.view === v));
+    });
+    document.querySelectorAll<HTMLElement>(".col > .card").forEach((el) => this.place(el));
+    this.map?.resize();
+    this.update();
+  }
+
+  /** A checkbox in the map's layer panel, listed under its `group` heading. Returns a setter for changing it from code. */
+  check(label: string, on: boolean, onChange: (on: boolean) => void, group = "Flooding", o: LayerOpts = {}) {
+    const panel = $("map-layers");
+    const views = o.views ?? "both";
+    const head = panel.querySelector<HTMLElement>(`.layers-h[data-group="${group}"]`);
+    // the heading shows in every view that has at least one of its checkboxes
+    if (!head) panel.insertAdjacentHTML("beforeend", `<div class="layers-h" data-group="${group}" data-views="${views}">${group}</div>`);
+    else if (head.dataset.views !== views) head.dataset.views = "both";
+    const l = document.createElement("label");
+    l.dataset.group = group;
+    l.dataset.views = views;
+    l.innerHTML = `<input type="checkbox" ${on ? "checked" : ""} /> ${label}`;
+    const input = l.querySelector("input")!;
+    const apply = (v: boolean) => { onChange(v); if (o.key) this.legendKey(o.key, v); };
+    input.onchange = () => apply(input.checked);
+    const inGroup = panel.querySelectorAll(`[data-group="${group}"]`);
+    inGroup[inGroup.length - 1].after(l);
+    if (o.key) this.legendKey(o.key, on);
+    return (v: boolean) => { input.checked = v; apply(v); };
+  }
+
+  /** A checkbox that shows or hides map layers. */
+  toggle(label: string, layerIds: string[], on = true, group = "Flooding", o: LayerOpts = {}) {
+    const set = (v: boolean) => layerIds.forEach((id) => this.map.getLayer(id) && this.map.setLayoutProperty(id, "visibility", v ? "visible" : "none"));
+    const setter = this.check(label, on, set, group, o);
+    if (!on) set(false);
+    return setter;
+  }
+
+  /** Legend entries; `key` hides them while that layer is off. */
+  legend(html: string, o: LayerOpts = {}) {
+    const off = o.key != null && this.keyOn.get(o.key) === false;
+    $("legend").insertAdjacentHTML("beforeend", `<div class="lg" data-views="${o.views ?? "both"}"${o.key ? ` data-key="${o.key}"` : ""}${off ? " hidden" : ""}>${html}</div>`);
+  }
+  private legendKey(key: string, on: boolean) {
+    this.keyOn.set(key, on);
+    document.querySelectorAll<HTMLElement>(`#legend .lg[data-key="${key}"]`).forEach((el) => (el.hidden = !on));
+  }
+  /** Right side of the header: the "Right now" block. */
+  headerNow(el: HTMLElement) { $("top-now").append(el); }
+  /** Under the HackRU-26 title (the live / what-if indicator). */
+  heroStatus(el: HTMLElement) { $("hero-status").append(el); }
+  /** A floating card on the map, like the legend. */
+  mapOverlay(el: HTMLElement) { $("mapwrap").append(el); }
 
   hint(text?: string) { $("map-hint").textContent = text ?? this.defaultHint; }
   setDefaultHint(text: string) { this.defaultHint = text; this.hint(); }
@@ -106,6 +175,8 @@ export class App {
   }
 
   async start(createMap: () => Promise<MLMap>) {
+    document.body.dataset.view = this.state.view;
+    document.querySelectorAll<HTMLButtonElement>("#view-seg button").forEach((b) => (b.onclick = () => this.setView(b.dataset.view as View)));
     this.map = await createMap();
     for (const f of this.features) await f.init(this);
     this.map.on("click", (ev) => {
@@ -123,6 +194,7 @@ export class App {
     // small screens start with the map overlays folded so they don't cover the flood
     if (matchMedia("(max-width: 1000px)").matches) for (const id of ["layers-box", "legend-box"]) $(id).removeAttribute("open");
     this.started = true;
+    this.setView(this.state.view);
     for (const f of this.features) await f.ready?.(this);
     this.update();
     if (import.meta.env.DEV) (window as unknown as { __rudc: object }).__rudc = { app: this, map: this.map };

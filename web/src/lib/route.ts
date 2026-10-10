@@ -125,7 +125,15 @@ export class Router {
     return { km: total / 1000, named: [...byName.entries()].sort((a, b) => b[1] - a[1]) };
   }
 
-  private dijkstra(src: number, riseDm: number, observed: Closed) {
+  /** Edges mapped as stairs (OSM highway=steps), for step-free routing. */
+  private stairs: Set<number> | null = null;
+  stairEdges(): Set<number> {
+    if (!this.stairs) { this.stairs = new Set(); this.r.edges.forEach((e, i) => { if (this.name(e) === "steps") this.stairs!.add(i); }); }
+    return this.stairs;
+  }
+
+  private dijkstra(src: number, riseDm: number, observed: Closed, noStairs: boolean) {
+    const stairs = noStairs ? this.stairEdges() : null;
     const n = this.nodeCount;
     const dist = new Float64Array(n).fill(Infinity);
     const prev = new Int32Array(n).fill(-1);
@@ -157,7 +165,7 @@ export class Router {
       if (d > dist[u]) continue;
       for (let k = this.adjStart[u]; k < this.adjStart[u + 1]; k++) {
         const ei = this.adj[k], e = this.r.edges[ei];
-        if (e[3] <= riseDm || observed.has(ei)) continue;
+        if (e[3] <= riseDm || observed.has(ei) || stairs?.has(ei)) continue;
         const v = e[0] === u ? e[1] : e[0];
         const nd = d + e[2];
         if (nd < dist[v]) { dist[v] = nd; prev[v] = ei; push([nd, v]); }
@@ -166,10 +174,10 @@ export class Router {
     return { dist, prev };
   }
 
-  /** Route from a point to the nearest gathering point that stays dry at this rise. */
-  plan(lon: number, lat: number, riseDm: number, places: Place[], observed: Closed = new Set()): Plan | null {
+  /** Route from a point to the nearest gathering point that stays dry at this rise; `noStairs` skips mapped staircases. */
+  plan(lon: number, lat: number, riseDm: number, places: Place[], observed: Closed = new Set(), noStairs = false): Plan | null {
     const src = this.nearest(lon, lat);
-    const { dist, prev } = this.dijkstra(src, riseDm, observed);
+    const { dist, prev } = this.dijkstra(src, riseDm, observed, noStairs);
     let best: { p: Place; node: number } | null = null;
     for (const p of places) {
       if (p.kind !== "gather" || p.block <= riseDm + DRY_MARGIN_DM) continue;

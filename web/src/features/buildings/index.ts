@@ -43,8 +43,9 @@ const feature: Feature = {
       paint: { "circle-radius": 4, "circle-color": color, "circle-stroke-color": "#081018", "circle-stroke-width": 1 } });
     m.on("mouseenter", "rutgers", () => (m.getCanvas().style.cursor = "pointer"));
     m.on("mouseleave", "rutgers", () => (m.getCanvas().style.cursor = ""));
-    app.toggle("Rutgers buildings", ["rutgers", "rutgers-line", "rutgers-pt"]);
-    app.legend(`<div><i class="sw" style="background:#f59e0b"></i>RU bldg: water at walls</div><div><i class="sw" style="background:#ef4444"></i>RU bldg: ≥ 30 cm</div>`);
+    app.toggle("Rutgers buildings", ["rutgers", "rutgers-line", "rutgers-pt"], true, "Facilities", { key: "rutgers" });
+    app.legend(`<div><i class="sw" style="background:#f59e0b"></i>RU bldg: water at walls</div><div><i class="sw" style="background:#ef4444"></i>RU bldg: ≥ 30 cm</div>`, { views: "admin", key: "rutgers" });
+    app.legend(`<div><i class="sw" style="background:#cc0033;opacity:.6"></i>Rutgers building</div><div><i class="sw" style="background:#f59e0b"></i>Rutgers bldg: water at walls</div>`, { views: "student", key: "rutgers" });
     app.card({ col: "right", id: "buildings-card", title: "Rutgers buildings at risk", order: 50, html: `<div class="small muted" id="b-summary"></div><ul class="blist" id="b-list"></ul>` });
     app.card({ col: "right", id: "campus-card", title: "Campus resources", order: 60, extraTitle: ` <span class="src muted">${campus.fy.split(" ")[0]}</span>`, html: `
       <ul class="contacts">${[
