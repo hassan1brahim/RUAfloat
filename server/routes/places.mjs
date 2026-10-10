@@ -3,6 +3,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { UA, cached, send } from "../lib/http.mjs";
+import { clientIp, limiter, spaced, tooMany } from "../lib/limit.mjs";
+
+const perPerson = limiter(30, 60e3);
+const nominatim = spaced(1100);   // Nominatim usage policy: at most 1 request per second, from the whole app
 
 // Campus names point at that campus's student center (a gathering point).
 const CAMPUSES = {
@@ -46,7 +50,7 @@ export default function register(api, ctx) {
     const tries = [...new Set([q, q.replace(/\band\b/gi, "&"), `${q} Rutgers`])];
     for (const t of tries) {
       const url = `https://nominatim.openstreetmap.org/search?format=json&limit=3&bounded=1&viewbox=${w},${n},${e},${s}&q=${encodeURIComponent(t)}`;
-      const r = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(6000) });
+      const r = await nominatim(() => fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(6000) }));
       if (!r.ok) continue;
       // Keep only results whose name shares a real word with the question (OSM sometimes returns a nearby address instead).
       const want = new Set(words(q).filter((x) => !FILLER.has(x)));
@@ -61,6 +65,7 @@ export default function register(api, ctx) {
   api.get("/api/places/search", async (req, res, m, url) => {
     const raw = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
     if (!raw) return send(res, 400, { error: "q required" });
+    if (!perPerson(clientIp(req))) throw tooMany();
     const q = raw.toLowerCase().replace(/^(the|i'?m at|at|in|near)\s+/g, "");
     const campus = CAMPUSES[q.replace(/\s*campus$/, "")];
     if (campus) {
