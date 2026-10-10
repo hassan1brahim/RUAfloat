@@ -1,0 +1,4 @@
+.pill.drill { background: #2a1d07; color: var(--warn); border-color: #5b4111; }
+.drill-note { font-size: 12px; margin-left: 8px; }
+.drill-note.ok { color: var(--ok); }
+.drill-note.warn { color: var(--warn); }

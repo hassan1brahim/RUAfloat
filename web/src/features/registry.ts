@@ -16,5 +16,6 @@ import a11y from "./a11y";
 import whatif from "./whatif";
 import share from "./share";
 import admin from "./admin";
+import drill from "./drill";
 
-export const FEATURES: Feature[] = [river, flood, roads, guide, layers, buildings, roadpanel, detection, nwm, forecast, voice, student, a11y, whatif, share, admin];
+export const FEATURES: Feature[] = [river, flood, roads, guide, layers, buildings, roadpanel, detection, nwm, forecast, voice, student, a11y, whatif, share, admin, drill];
