@@ -9,6 +9,7 @@ const listeners: ((text: string, voice: string) => void)[] = [];
 const SR_KEY = "HackRU-26-screen-reader";
 
 export function screenReaderMode(): boolean {
+  if (srOverride !== null) return srOverride;   // set this page, even when storage is blocked
   if (new URLSearchParams(location.search).get("sr") === "1") return true;
   try { return localStorage.getItem(SR_KEY) === "1"; } catch { return false; }
 }
@@ -17,7 +18,7 @@ export function setScreenReaderMode(on: boolean) {
   srOverride = on;
 }
 let srOverride: boolean | null = null;
-const srOn = () => srOverride ?? screenReaderMode();
+const srOn = () => screenReaderMode();
 
 /** Speak through the screen reader only (no app audio), e.g. for status updates. */
 export function announce(text: string) {

@@ -1,15 +1,14 @@
 /**
  * Screen-reader support for blind and low-vision users (VoiceOver, TalkBack, NVDA, JAWS):
  * - "Map in words": everything the map shows, as text, first in the reading order.
- * - Screen-reader mode: the app hands speech to the user's screen reader instead of playing its own voice.
+ * - Screen-reader mode lives in the student Accessibility panel; speech.ts does the hand-off.
  * - Skip links, a page heading, and every panel exposed as a named region, so users can jump instead of swiping.
  */
 import type { App, Feature } from "../../core/app";
-import { $ } from "../../core/util";
-import { announce, screenReaderMode, setScreenReaderMode, speak } from "../../lib/speech";
+import { $, esc } from "../../core/util";
+import { announce, speak } from "../../lib/speech";
 import "./style.css";
 
-const esc = (s: unknown) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const list = (xs: string[], none: string) => (xs.length ? `<ul>${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p>${none}</p>`);
 
 type Facts = {
@@ -92,6 +91,7 @@ const feature: Feature = {
     const safe = document.createElement("button");
     safe.id = "btn-safety";
     safe.className = "btn safety-btn";
+    safe.dataset.views = "student";   // admins act on the dashboard, not a route
     safe.setAttribute("aria-describedby", "btn-safety-help");
     safe.innerHTML = `<span aria-hidden="true">🆘</span> <span id="btn-safety-label">Get me to safety</span>
       <span id="btn-safety-help" class="sr-only">Uses your location, finds the nearest dry building and reads the walking route aloud.</span>`;
@@ -101,20 +101,15 @@ const feature: Feature = {
     // Skip links that appear on keyboard focus (the header already has the page's h1).
     // Skip links come right after the safety button in the reading order.
     document.querySelector("header.top")!.insertAdjacentHTML("afterend", `
-      <nav class="skip-links" aria-label="Skip links">
+      <nav class="skip-links" aria-label="Skip links" data-views="student">
         <a class="skip" href="#words-card">Skip to the map in words</a>
         <a class="skip" href="#guide-card">Skip to Where do I go?</a>
       </nav>`);
 
-    app.card({ col: "right", id: "words-card", title: "Map in words", order: 5, html: `
-      <label class="sr-toggle"><input type="checkbox" id="sr-mode" /> I use a screen reader (VoiceOver, TalkBack)
-        <span class="small muted">HackRU-26 will stop playing its own voice and send everything to your screen reader instead.</span></label>
+    app.card({ student: "left", studentOrder: 2, id: "words-card", title: "Map in words", order: 5, html: `
       <button id="words-read" class="btn">🔊 Read this aloud</button>
       <div id="words-body" class="words-body"></div>` });
 
-    const box = $<HTMLInputElement>("sr-mode");
-    box.checked = screenReaderMode();
-    box.onchange = () => setScreenReaderMode(box.checked);
     $("words-read").onclick = () => void speak(spoken(app.facts() as Facts));
 
     // The route is planned outside the update loop: refresh when its steps change.
