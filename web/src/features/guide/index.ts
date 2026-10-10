@@ -79,33 +79,33 @@ const feature: Feature = {
 
     // One box: where you are (or your location), then Route from this place.
     app.card({ student: "left", studentOrder: 1, id: "guide-card", title: "Get me to safety", order: 20, html: `
+      <button id="btn-guide" class="btn primary safety-go"><span aria-hidden="true">🆘</span> Use my location</button>
       <div id="start-box" class="start-box">
-      <div id="start-msg" class="start-msg" role="status" hidden></div>
-      <label class="start-label" for="start-select">You are currently at:</label>
-      <select id="start-select"><option value="">Choose a place, or pick on the map…</option></select>
-      <label class="small muted" for="place-q" style="display:block;margin-top:8px">Or search any building</label>
-      <div class="row"><input id="place-q" type="search" placeholder="e.g. LSM, Hill Center, Scott Hall" autocomplete="off" /></div>
-      <div id="place-n" class="sr-only" role="status"></div>
-      <ul id="place-results" class="place-results" aria-label="Search results"></ul>
-      <div class="row gap"><button id="btn-gps" class="btn ghost small"><span aria-hidden="true">◎</span> Use my GPS</button><button id="btn-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button></div>
-      <div class="row gap"><button id="btn-guide" class="btn primary"><span aria-hidden="true">🔊</span> Route from this place</button></div>
-      <p class="safety-note">If location is on and no place is chosen, it will route you immediately to the nearest safe spot.</p>
+        <div id="start-msg" class="start-msg" role="status" hidden></div>
+        <div class="from-row">
+          <span class="from-dot" aria-hidden="true"></span>
+          <input id="place-q" type="search" placeholder="Where are you? Search a building" autocomplete="off" aria-label="Where are you? Search a building or landmark" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="place-results" />
+          <button id="btn-gps" class="icon-btn" title="Use my GPS" aria-label="Use my GPS">⌖</button>
+          <button id="btn-pick" class="icon-btn" title="Pick on map" aria-label="Pick on map">📍</button>
+        </div>
+        <div id="place-n" class="sr-only" role="status"></div>
+        <ul id="place-results" class="place-results" aria-label="Places"></ul>
       </div>
       <div id="guide-out" class="guide-out" hidden>
         <div class="dest" id="g-dest" tabindex="-1"></div>
-        <div class="row gap small"><button id="btn-replay" class="read-toggle" role="switch" aria-checked="false"><span><span aria-hidden="true">🔊</span> Read aloud</span><span class="rt-track" aria-hidden="true"><span class="rt-knob"></span></span><span class="rt-state" aria-hidden="true">OFF</span></button></div>
+        <ul id="dest-list" class="route-list" aria-label="Places to go, nearest first"></ul>
+        <div id="g-replan" class="replan" hidden>The river changed, so the route was updated. <button id="btn-respeak" class="link">Show it</button></div>
+        <div id="g-stepsbox" class="steps-box">
+          <div class="step-head"><span class="mono small muted" id="g-steplbl"></span><button id="btn-replay" class="read-toggle" role="switch" aria-checked="false"><span><span aria-hidden="true">🔊</span> Read aloud</span><span class="rt-track" aria-hidden="true"><span class="rt-knob"></span></span></button></div>
+          <div class="onestep" id="g-onestep" hidden>
+            <div class="steptext" id="g-steptext" aria-live="polite"></div>
+            <div class="row gap"><button id="g-prev" class="btn ghost small">Back</button><button id="g-next" class="btn small">Next</button></div>
+          </div>
+          <ol class="steps" id="g-steps"></ol>
+          <button id="g-all" class="link small" hidden>All steps</button>
+        </div>
         <!-- spoken script, voice and AI-guard details: kept for debugging and a possible Admin view, not shown to students -->
         <blockquote id="g-script" hidden></blockquote><span id="g-voice" hidden></span><div class="badge-row" id="g-by" hidden></div>
-        <ol class="steps" id="g-steps"></ol>
-        <div class="onestep" id="g-onestep" hidden>
-          <div class="row"><span class="mono small muted" id="g-steplbl"></span></div>
-          <div class="steptext" id="g-steptext" aria-live="polite"></div>
-          <div class="row gap"><button id="g-prev" class="btn ghost small">Back</button><button id="g-next" class="btn small">Next direction</button></div>
-        </div>
-        <button id="g-all" class="link small" hidden>Show all steps</button>
-        <h3 class="dest-h" id="dest-h">Options to go</h3>
-        <ul id="dest-list" class="dest-list" aria-labelledby="dest-h"></ul>
-        <div id="g-replan" class="replan" hidden>Route re-planned (river level or route options changed). <button id="btn-respeak" class="link">Hear the new route</button></div>
       </div>` });
     app.card({ student: "left", studentOrder: 6, id: "contacts-card", title: "Contact emergency", order: 70, html: `
       <ul class="contacts">
@@ -116,17 +116,14 @@ const feature: Feature = {
       </ul>` });
     $("impact-stats")?.insertAdjacentHTML("beforeend", `<div><b id="s-gather" class="mono">--</b><span>gathering pts dry</span></div>`);
 
-    const sel = $<HTMLSelectElement>("start-select");
-    for (const s of starts) sel.add(new Option(s.name, JSON.stringify(s)));
-    sel.onchange = () => sel.value && setStart(JSON.parse(sel.value));
+    const q = $<HTMLInputElement>("place-q"), results = $("place-results");
     $("btn-guide").onclick = () => void (start ? run() : locateAndRun());
-    $("btn-pick").onclick = () => app.pick("Click the map where you are", (pt: Pt) => setStart({ name: "Pinned location", ...pt }));
+    $("btn-pick").onclick = () => app.pick("Click the map where you are", (pt: Pt) => { setStart({ name: "Pinned location", ...pt }); void run(); });
     $("btn-replay").onclick = () => {
       readOn = !readOn;
       const b = $("btn-replay");
       b.setAttribute("aria-checked", String(readOn));
       b.classList.toggle("on", readOn);
-      b.querySelector(".rt-state")!.textContent = readOn ? "ON" : "OFF";
       if (readOn) { lastRead = ""; readCurrent(); } else stopSpeaking();
     };
     $("btn-respeak").onclick = () => void run();
@@ -134,30 +131,54 @@ const feature: Feature = {
     $("g-next").onclick = () => showStep(stepIdx + 1);
     $("g-all").onclick = () => { showAll = !showAll; renderSteps(); };
 
-    // Search: the same 324-building index the voice agent uses. Results are plain buttons a screen reader can read.
-    const q = $<HTMLInputElement>("place-q"), results = $("place-results");
-    let qTimer = 0;
-    q.oninput = () => {
-      clearTimeout(qTimer);
-      const text = q.value.trim();
-      if (text.length < 2) { results.innerHTML = ""; $("place-n").textContent = ""; return; }
-      qTimer = window.setTimeout(async () => {
-        let r: { matches?: { name: string; lon: number; lat: number; campus: string | null }[]; note?: string; error?: string };
-        try { r = await getJson(`/api/places/search?q=${encodeURIComponent(text)}`); } catch { r = { error: "search unavailable" }; }
-        const m = (r.matches ?? []).filter((x) => app.get("grid").cellAt(x.lon, x.lat) >= 0);
-        results.innerHTML = m.map((x, i) => `<li><button class="btn ghost small" data-i="${i}">${esc(x.name)}${x.campus ? `<span class="muted">, ${esc(x.campus)}</span>` : ""}</button></li>`).join("");
-        results.onclick = (e) => {
-          const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-i]");
-          if (!b) return;
-          const x = m[+b.dataset.i!];
-          setStart({ name: x.name, lon: x.lon, lat: x.lat });
-          results.innerHTML = ""; q.value = "";
-          announce(`Starting point: ${x.name}. Press Route from this place.`);
-          $("btn-guide").focus();
-        };
-        $("place-n").textContent = r.error ? "Search unavailable." : m.length ? `${m.length} result${m.length > 1 ? "s" : ""}${r.note ? `. ${r.note}` : ""}` : "No matches in the area this app covers.";
-      }, 300);
+    // Where are you: "Your location" and campus landmarks right away, then the 324-building index (same as the voice agent).
+    type Hit = { name: string; lon: number; lat: number; campus?: string | null; gps?: true };
+    let hits: Hit[] = [], qTimer = 0;
+    const showHits = (list: Hit[], note = "") => {
+      hits = list;
+      q.setAttribute("aria-expanded", String(list.length > 0));
+      results.innerHTML = list.map((x, i) => `<li><button class="hit" data-i="${i}">${x.gps ? `<span aria-hidden="true">⌖</span> ` : ""}${esc(x.name)}${x.campus ? `<span class="muted"> · ${esc(x.campus)}</span>` : ""}</button></li>`).join("");
+      $("place-n").textContent = note || (list.length ? `${list.length} places` : "");
     };
+    const suggest = () => {
+      clearTimeout(qTimer);
+      const text = q.value.trim(), t = text.toLowerCase();
+      const local: Hit[] = [...(t ? [] : [{ name: "Your location", lon: 0, lat: 0, gps: true as const }]), ...starts.filter((x) => !t || x.name.toLowerCase().includes(t))].slice(0, 7);
+      showHits(local);
+      if (text.length < 2) return;
+      qTimer = window.setTimeout(async () => {
+        let r: { matches?: Hit[]; note?: string; error?: string };
+        try { r = await getJson(`/api/places/search?q=${encodeURIComponent(text)}`); } catch { r = { error: "search unavailable" }; }
+        const more = (r.matches ?? []).filter((x) => app.get("grid").cellAt(x.lon, x.lat) >= 0 && !local.some((l) => l.name === x.name));
+        const all = [...local, ...more].slice(0, 8);
+        showHits(all, r.error ? "Search unavailable." : all.length ? `${all.length} places${r.note ? `. ${r.note}` : ""}` : "No matches in the area this app covers.");
+      }, 250);
+    };
+    q.onfocus = () => { q.select(); suggest(); };
+    q.oninput = suggest;
+    const close = () => { results.innerHTML = ""; q.setAttribute("aria-expanded", "false"); };
+    const hitButtons = () => [...results.querySelectorAll<HTMLButtonElement>("button.hit")];
+    q.onkeydown = (e) => {
+      if (e.key === "Escape") close();
+      else if (e.key === "Enter" && hits[0]) { e.preventDefault(); choose(hits[0]); }
+      else if (e.key === "ArrowDown" && hitButtons()[0]) { e.preventDefault(); hitButtons()[0].focus(); }
+    };
+    results.onkeydown = (e) => {
+      const list = hitButtons(), i = list.indexOf(document.activeElement as HTMLButtonElement);
+      if (e.key === "ArrowDown") { e.preventDefault(); list[Math.min(list.length - 1, i + 1)]?.focus(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); (i <= 0 ? q : list[i - 1]).focus(); }
+      else if (e.key === "Escape") { e.preventDefault(); close(); q.focus(); }
+    };
+    const leave = () => setTimeout(() => { if (document.activeElement !== q && !results.contains(document.activeElement)) { close(); if (start) q.value = shownName(start); } }, 150);
+    q.onblur = leave;
+    results.addEventListener("focusout", leave);
+    const choose = (x: Hit) => {
+      close();
+      if (x.gps) return $("btn-gps").click();
+      setStart({ name: x.name, lon: x.lon, lat: x.lat });
+      void run();
+    };
+    results.onclick = (e) => { const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-i]"); if (b) choose(hits[+b.dataset.i!]); };
 
     // Options to go: dry gathering points within a 20-minute walk, nearest first. The button text carries the place information.
     $("dest-list").onclick = (e) => {
@@ -175,6 +196,7 @@ const feature: Feature = {
         if (!f) return askForPlace("Couldn't get your location. Choose where you are:");
         if (app.get("grid").cellAt(f.lon, f.lat) < 0) return askForPlace("You're outside the area this app covers. Choose where you are on campus:");
         setFromFix(f);
+        void run();
       });
     };
 
@@ -187,7 +209,7 @@ const feature: Feature = {
       btn.disabled = true; btn.textContent = "Finding your location…";
       announce("Finding your location.");
       const pos = await bestPosition({ onProgress: (f) => (btn.textContent = `Finding your location… within ${Math.round(f.accuracy)} m`) });
-      btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Route from this place`;
+      btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🆘</span> Use my location`;
       if (pos && app.get("grid").cellAt(pos.lon, pos.lat) >= 0) {
         setFromFix(pos);
       } else if (app.state.mode !== "live") {
@@ -209,7 +231,7 @@ const feature: Feature = {
       $("start-msg").hidden = false;
       $("start-box").classList.add("need");
       $("start-box").scrollIntoView({ behavior: "smooth", block: "nearest" });
-      sel.focus({ preventScroll: true });
+      q.focus({ preventScroll: true });
     }
 
     function setStart(s: Start) {
@@ -225,26 +247,17 @@ const feature: Feature = {
       }
       start = s;
       app.hint(`From: ${s.name} · click a road for its status`);
-      // Places not in the list (your location, a pinned point, a building found by voice) get their own entry,
-      // so the dropdown never claims nothing is chosen.
-      let idx = [...sel.options].findIndex((o) => o.text === s.name);
-      if (idx < 0) {
-        [...sel.options].filter((o) => o.dataset.extra).forEach((o) => o.remove());
-        const o = new Option(s.name, JSON.stringify(s));
-        o.dataset.extra = "1";
-        sel.add(o, 1);
-        idx = 1;
-      }
-      sel.selectedIndex = idx;
+      q.value = shownName(s);
+      $("btn-guide").hidden = true;   // a start is set: routes plan as soon as it changes
       marker?.remove();
       const el = document.createElement("div");
       el.style.cssText = "width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid #cc0033;box-shadow:0 0 0 6px rgba(204,0,51,.25)";
       // Draggable: a laptop's Wi-Fi guess can be hundreds of metres off, so the student can put the pin where they are.
       marker = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([s.lon, s.lat]).addTo(app.map);
       marker.on("dragend", () => {
-        const at = marker!.getLngLat(), hadRoute = !!plan;
+        const at = marker!.getLngLat();
         setStart({ name: "Pinned location", lon: at.lng, lat: at.lat });
-        if (hadRoute) void run();
+        void run();
       });
       (app.map.getSource("you-acc") as GeoJSONSource).setData(s.accuracy && s.accuracy > 15
         ? { type: "FeatureCollection", features: [circle(s.lon, s.lat, s.accuracy)] } : { type: "FeatureCollection", features: [] });
@@ -266,29 +279,32 @@ const feature: Feature = {
       $("g-steps").innerHTML = p ? p.steps.map((s) => `<li>${s.say}</li>`).join("") : "";
       stepIdx = 0;
       renderSteps();
-      $("g-dest").innerHTML = p?.here
-        ? `You're at a help meetup spot: ${esc(p.dest.name)}<small>It stays dry at this river level · gathering point, not an official shelter</small>`
-        : p
-        ? `→ ${p.dest.name}<small>${(p.meters / 1000).toFixed(2)} km · ~${Math.round(p.minutes)} min walk · ${p.dest.campus ?? ""}${p.dest.capacity ? ` · ~${p.dest.capacity.toLocaleString()} people (est.)` : ""} · gathering point, not an official shelter</small>`
-        : "No dry gathering point reachable on foot";
+      // One line. A normal route is described by its row, so the line is only there for screen readers to land on.
+      const d = $("g-dest");
+      d.className = p && !p.here ? "dest sr-only" : p ? "dest here" : "dest danger";
+      d.textContent = p?.here ? `You're at ${p.dest.name}. It stays dry: stay here.`
+        : p ? `Route to ${p.dest.name}, about ${Math.max(1, Math.round(p.minutes))} minutes on foot.`
+        : "No dry spot reachable on foot. Go to the highest floor you can and call 911.";
     }
     showPlanRef = showPlan;
 
     /** Student option: one instruction at a time instead of the full list. */
     function renderSteps() {
       // Student view: one direction at a time by default (Back / Next); the full list is one click away.
-      const student = app.state.view === "student", one = student && !showAll && !!plan;
+      const student = app.state.view === "student", one = student && !showAll && !!plan && !plan.here;
       stepsMode = `${showAll}|${app.state.view}`;
+      $("g-stepsbox").hidden = !plan || !!plan.here;   // at a meetup spot there's nothing to walk
       $("g-steps").hidden = one;
       $("g-onestep").hidden = !one;
       $("g-all").hidden = !student || !plan;
-      $("g-all").textContent = showAll ? "Show one step at a time" : "Show all steps";
+      $("g-all").textContent = showAll ? "One step at a time" : "All steps";
+      $("g-steplbl").textContent = plan ? (one ? `Step ${stepIdx + 1} of ${plan.steps.length}` : `${plan.steps.length} steps`) : "";
       if (one) showStep(stepIdx);
     }
     function showStep(i: number) {
       if (!plan) return;
       stepIdx = Math.max(0, Math.min(plan.steps.length - 1, i));
-      $("g-steplbl").textContent = `STEP ${stepIdx + 1} OF ${plan.steps.length}`;
+      $("g-steplbl").textContent = `Step ${stepIdx + 1} of ${plan.steps.length}`;
       $("g-steptext").textContent = plan.steps[stepIdx].say;
       readCurrent();
     }
@@ -303,10 +319,22 @@ const feature: Feature = {
     }
     renderStepsRef = renderSteps;
 
+    /** Never fail silently: if planning breaks, say so in the card (and log it) instead of leaving an empty box. */
     async function run(silent = false): Promise<{ script: string; plan: Plan | null }> {
+      try { return await plan_(silent); }
+      catch (e) {
+        console.error("route planning failed", e);
+        const d = $("g-dest");
+        d.className = "dest danger";
+        d.textContent = `Couldn't plan a route (${(e as Error).message}). Choose another place, or call 911 if you're in danger.`;
+        $("guide-out").hidden = false;
+        d.focus();
+        return { script: "", plan: null };
+      }
+    }
+    async function plan_(silent: boolean): Promise<{ script: string; plan: Plan | null }> {
       if (!start) { app.hint("First: pick where you are"); return { script: "", plan: null }; }
       const btn = $<HTMLButtonElement>("btn-guide");
-      btn.disabled = true; btn.textContent = "Planning…";
       $("guide-out").hidden = false; $("g-replan").hidden = true;
       const rise = app.rise(), s = start, obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
       const p = app.get("grid").depthAt(s.lon, s.lat, rise) >= 3 ? null : app.get("router").plan(s.lon, s.lat, rise, targets(rise), obs.closed);
@@ -339,7 +367,7 @@ const feature: Feature = {
       ].join("");
       lastScript = res.script;
       if (!p) readCurrent();   // shelter in place: the fixed message is the only thing to read
-      btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Route from this place`;
+      btn.disabled = false;
       // Nothing is spoken automatically: the student presses Read aloud. (`silent` stays for callers like the voice agent.)
       return { script: res.script, plan: p };
     }
@@ -388,6 +416,9 @@ const feature: Feature = {
 };
 let showPlanRef: (p: Plan | null) => void = () => {};
 
+/** What the "where are you" box shows for a start. */
+const shownName = (s: Start) => (s.name === "Pinned location" ? "Pinned on the map" : s.name);
+
 /** The chosen gathering point while it stays dry; otherwise every place, so the planner picks the nearest. */
 function targets(rise: number): Place[] {
   if (chosen && chosen.block <= rise + DRY_MARGIN_DM) chosen = null;   // it flooded: fall back to the nearest
@@ -402,10 +433,13 @@ function renderDestinations(app: App) {
   const near = reach.filter((x) => x.minutes <= MAX_WALK_MIN);
   const all = near.length ? near : reach.slice(0, 1);
   const html = all.slice(0, 6).map(({ place: p, meters, minutes }, i) => {
-    const on = plan?.dest.name === p.name;
-    return `<li><button class="dest-btn${on ? " on" : ""}" data-dest="${i === 0 ? "" : esc(p.name)}" aria-pressed="${on}">
-      <b>${esc(p.name)}</b><span>${Math.max(1, Math.round(minutes))} minute walk · ${(meters / 1000).toFixed(1)} km · predicted to stay dry${p.capacity ? ` · room for about ${p.capacity.toLocaleString()} people` : ""}${p.campus ? ` · ${esc(p.campus)}` : ""}${i === 0 ? (minutes > MAX_WALK_MIN ? " · nearest, a long walk" : " · nearest") : ""}</span></button></li>`;
-  }).join("") || `<li class="muted">No dry gathering point reachable on foot.</li>`;
+    const on = plan?.dest.name === p.name, min = Math.max(1, Math.round(minutes));
+    const km = (meters / 1000).toFixed(1);
+    const spoken = `${p.name}${i === 0 ? ", nearest" : ""}, ${min} minute${min > 1 ? "s" : ""} walk, ${km} kilometers, stays dry${p.capacity ? `, room for about ${p.capacity.toLocaleString()} people` : ""}`;
+    return `<li><button class="route-row${on ? " on" : ""}" data-dest="${i === 0 ? "" : esc(p.name)}" aria-pressed="${on}" aria-label="${esc(spoken)}">
+      <span class="rr-main"><b>${esc(p.name)}</b><span>${i === 0 ? (minutes > MAX_WALK_MIN ? "Nearest, a long walk · " : "Nearest · ") : ""}stays dry${p.capacity ? ` · room for ~${p.capacity.toLocaleString()}` : ""}</span></span>
+      <span class="rr-side"><b class="${min <= 10 ? "fast" : ""}">${min} min</b><span>${km} km</span></span></button></li>`;
+  }).join("") || `<li class="muted small">No dry gathering point reachable on foot.</li>`;
   if (html !== destShown) $("dest-list").innerHTML = destShown = html;   // untouched unless it changed, so VoiceOver doesn't lose its place
 }
 let renderStepsRef: () => void = () => {};

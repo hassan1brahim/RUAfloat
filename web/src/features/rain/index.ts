@@ -41,7 +41,7 @@ function idaSum(hours: number) {
 
 function radarOf(s: Spot): Radar | null {
   if (idaT != null) return { id: s.id, rain_1h_in: idaSum(1), rain_3h_in: idaSum(3), rain_6h_in: idaSum(6), rain_12h_in: idaSum(12), valid_until: new Date(idaT).toISOString() };
-  return rain?.radar.find((r) => r.id === s.id) ?? null;
+  return rain?.radar?.find((r) => r.id === s.id) ?? null;
 }
 const fc6 = () => (idaT != null ? 0 : rain?.forecast && !rain.forecast.error ? rain.forecast.next_6h_in : 0);
 const rainLabel = () => (idaT != null ? "(Ida 2021, Somerset rain gauge)" : "(NOAA radar)");
@@ -129,7 +129,11 @@ const feature: Feature = {
       return { closed, evidence: (ei) => [...o.evidence(ei), ...(extra.get(ei) ?? [])] };
     });
 
-    const load = async () => { try { rain = await getJson<Rain>("/api/rain"); } catch { rain = null; } refreshAll(app); };
+    // an error reply ({error}) or a missing radar list means "no rain data", never a crash further down (routing reads this)
+    const load = async () => {
+      try { const r = await getJson<Rain>("/api/rain"); rain = Array.isArray(r?.radar) ? r : null; } catch { rain = null; }
+      refreshAll(app);
+    };
     await load();
     setInterval(load, 5 * 60e3);
   },
