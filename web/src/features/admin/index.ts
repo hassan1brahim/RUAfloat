@@ -22,18 +22,13 @@ type Admin = {
 
 /** Closing levels this close to normal flow would flood every week: almost certainly a model edge, not a real closure. */
 const SUSPECT_FT = 19;
-const TOKEN_KEY = "admin-token";
-const token = () => { try { return sessionStorage.getItem(TOKEN_KEY) ?? ""; } catch { return ""; } };
 
 let last: Admin | null = null, timer = 0, inflight = false;
 let picking: { kind: "road" | "building"; target: string; lon: number; lat: number } | null = null;
 
 const NEXT_LABEL: Partial<Record<DispatchStatus, string>> = { pending: "Acknowledge", acknowledged: "Mark en route", "en-route": "Mark on scene", "on-scene": "Clear" };
 const UNIT_KIND = { police: "Police", fire: "Fire", hospital: "Hospital" };
-const tokenRow = (id: string) => (token() ? "" : `<div class="row gap"><input id="${id}" class="adm-token" type="password" placeholder="Admin token" aria-label="Admin token" /><button class="btn small" data-token-save="${id}">Save</button></div>`);
-const saveToken = (id: string) => { try { sessionStorage.setItem(TOKEN_KEY, $<HTMLInputElement>(id).value.trim()); } catch { /* storage blocked: re-enter next time */ } };
-const dropToken = () => { try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ } };
-const adminPost = (url: string, body: unknown) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-token": token() }, body: JSON.stringify(body) });
+const postJson = (url: string, body: unknown) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 /** Dispatch button for a row, or the open dispatch's unit and status. */
 function dispatchCell(kind: "road" | "building", name: string, lon: number | null, lat: number | null) {
@@ -99,7 +94,7 @@ function render() {
         AI: ${x.ai.water ? `water${x.ai.depth_cm ? ` ${x.ai.depth_cm[0]}–${x.ai.depth_cm[1]} cm` : ""}` : "unclear"}${x.ai.reference ? ` (${esc(x.ai.reference)})` : ""}${x.ai.concerns ? `<br><span class="warn">${esc(x.ai.concerns)}</span>` : ""}
         ${x.note ? `<br>“${esc(x.note)}”` : ""}
         <div class="row gap"><button class="btn small" data-verdict="confirmed">Confirm</button><button class="btn small ghost" data-verdict="rejected">Reject</button><button class="link small" data-show>Show</button></div></div></li>`).join("")
-    : `<li class="muted">No reports waiting.</li>`) + tokenRow("adm-token");
+    : `<li class="muted">No reports waiting.</li>`);
   $("adm-review-n").textContent = d.review.length ? String(d.review.length) : "";
 
   $("adm-disp").innerHTML = d.dispatch.length
@@ -122,7 +117,6 @@ async function openPicker(p: NonNullable<typeof picking>) {
   form.innerHTML = `<div class="small">Send to <b>${esc(p.target)}</b></div>
     <select id="adm-disp-unit" aria-label="Unit">${units.map((u) => `<option value="${esc(u.name)}">${UNIT_KIND[u.kind]} · ${esc(u.name)} (${(u.meters / 1000).toFixed(1)} km)</option>`).join("")}<option value="">Other (type a name)</option></select>
     <input id="adm-disp-other" class="adm-token" placeholder="Unit name, e.g. RUPD-3" aria-label="Unit name" ${units.length ? "hidden" : ""} />
-    ${tokenRow("adm-disp-token")}
     <div class="row gap"><button class="btn small" data-confirm>Send</button><button class="btn small ghost" data-cancel>Cancel</button></div>
     <div class="small warn" id="adm-disp-err"></div>
     <div class="muted small">Records the decision here. It does not contact the station: call them as usual.</div>`;
@@ -140,7 +134,8 @@ const feature: Feature = {
     app.card({ col: "right", id: "adm-bldg-card", title: "Highest-risk buildings", order: 5, html: `<div class="small" id="adm-bldg-sum"></div><ul class="alist" id="adm-bldg"><li class="muted">Loading…</li></ul>` });
     app.card({ col: "right", id: "adm-roads-card", title: "Roads: closed and closing", order: 15, html: `<div class="small" id="adm-roads-sum"></div><ul class="alist" id="adm-roads"></ul>` });
     app.card({ col: "right", id: "adm-review-card", title: "Needs a decision", order: 25, extraTitle: ` <span class="count" id="adm-review-n"></span>`,
-      html: `<ul class="alist review" id="adm-review"></ul><div class="small warn" id="adm-review-err"></div>` });
+      html: `<ul class="alist review" id="adm-review"></ul><div class="small warn" id="adm-review-err"></div>`,
+    });
     app.card({ col: "right", id: "adm-disp-card", title: "Dispatch", order: 20, extraTitle: ` <span class="count" id="adm-disp-n"></span>`,
       html: `<div id="adm-disp-form" class="disp-form" hidden></div><ul class="alist disp" id="adm-disp"></ul><div class="muted small">Unit screen: <a href="/unit.html" target="_blank">/unit.html</a></div>` });
     app.card({ col: "left", id: "adm-feed-card", title: "What changed", order: 5, html: `<ul class="feed" id="adm-feed"></ul>` });
@@ -161,16 +156,13 @@ const feature: Feature = {
     });
     $("adm-review").addEventListener("click", async (e) => {
       const t = e.target as HTMLElement, li = t.closest<HTMLElement>("li[data-id]");
-      if (t.dataset.tokenSave) { saveToken(t.dataset.tokenSave); return render(); }
       if (!li || !last) return;
       const item = last.review.find((x) => x.id === li.dataset.id)!;
       if (t.dataset.show != null) return fly(item.lon, item.lat);
       const verdict = t.dataset.verdict;
       if (!verdict) return;
       const err = $("adm-review-err");
-      if (!token()) { err.textContent = "Enter the admin token below first."; return; }
-      const r = await adminPost(`/api/reports/${item.id}/review`, { verdict });
-      if (r.status === 401) { dropToken(); render(); $("adm-review-err").textContent = "Wrong admin token — re-enter it below."; return; }
+      const r = await postJson(`/api/reports/${item.id}/review`, { verdict });
       if (!r.ok) { err.textContent = (await r.json().catch(() => null))?.error || `Request failed (${r.status}).`; return; }
       err.textContent = "";
       await load(app);
@@ -178,15 +170,12 @@ const feature: Feature = {
     });
     $("adm-disp-form").addEventListener("click", async (e) => {
       const t = e.target as HTMLElement;
-      if (t.dataset.tokenSave) { saveToken(t.dataset.tokenSave); t.closest(".row")!.remove(); return; }
       if (t.dataset.cancel != null) return closePicker();
       if (t.dataset.confirm == null || !picking) return;
       const sel = $<HTMLSelectElement>("adm-disp-unit").value, unit = sel || $<HTMLInputElement>("adm-disp-other").value.trim();
       const err = $("adm-disp-err");
       if (!unit) return void (err.textContent = "Pick or type a unit.");
-      if (!token()) return void (err.textContent = "Enter the admin token first.");
-      const r = await adminPost("/api/dispatch", { ...picking, unit });
-      if (r.status === 401) { dropToken(); err.textContent = "Wrong admin token."; return; }
+      const r = await postJson("/api/dispatch", { ...picking, unit });
       if (!r.ok) return void (err.textContent = (await r.json()).error);
       closePicker();
       await load(app);
@@ -194,8 +183,7 @@ const feature: Feature = {
     $("adm-disp").addEventListener("click", async (e) => {
       const t = e.target as HTMLElement, li = t.closest<HTMLElement>("li[data-id]");
       if (!li || !t.dataset.from) return;
-      const r = await adminPost(`/api/dispatch/${li.dataset.id}/advance`, { from: t.dataset.from });
-      if (r.status === 401) dropToken();
+      await postJson(`/api/dispatch/${li.dataset.id}/advance`, { from: t.dataset.from });
       await load(app);   // a 409 means the other screen moved it first; reload shows where it is
     });
     setInterval(() => app.state.mode === "live" && load(app), 30_000);

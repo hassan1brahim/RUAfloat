@@ -1,4 +1,4 @@
-/** Unit console: polls /api/dispatch, alerts on new dispatches, and moves them along. Same token as the admin view. */
+/** Unit console: polls /api/dispatch, alerts on new dispatches, and moves them along. */
 import "../core/base.css";
 import "./style.css";
 import { $, esc, et } from "../core/util";
@@ -7,8 +7,6 @@ type Status = "pending" | "acknowledged" | "en-route" | "on-scene" | "cleared";
 type Dispatch = { id: string; target: string; kind: "road" | "building"; unit: string; status: Status; created: string; history: { status: Status; at: string }[] };
 
 const NEXT_LABEL: Partial<Record<Status, string>> = { pending: "Acknowledge", acknowledged: "Mark en route", "en-route": "Mark on scene", "on-scene": "Clear" };
-const KEY = "admin-token";
-const token = () => { try { return sessionStorage.getItem(KEY) ?? ""; } catch { return ""; } };
 
 // Browsers only allow sound after a tap, so one context is created by the button and reused for every alert.
 let audio: AudioContext | null = null;
@@ -47,7 +45,6 @@ function render() {
     : `<li class="muted">No active dispatches. Waiting…</li>`;
   $("u-cleared").innerHTML = list.filter((d) => d.status === "cleared").slice(0, 10)
     .map((d) => `<li class="muted small">${esc(d.target)} · ${esc(d.unit)} · cleared ${et(d.history.at(-1)!.at)} ET</li>`).join("");
-  $("u-token").hidden = !!token();
 }
 
 async function tick() {
@@ -63,15 +60,9 @@ async function tick() {
 document.body.addEventListener("click", async (e) => {
   const t = e.target as HTMLElement, from = t.dataset.from, id = t.closest<HTMLElement>("[data-id]")?.dataset.id;
   if (!from || !id) return;
-  if (!token()) return void ($("u-token").hidden = false);
-  const r = await fetch(`/api/dispatch/${id}/advance`, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-token": token() }, body: JSON.stringify({ from }) });
-  if (r.status === 401) { try { sessionStorage.removeItem(KEY); } catch { /* ignore */ } }
+  await fetch(`/api/dispatch/${id}/advance`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from }) });
   await tick();   // a 409 means the admin moved it first; the reload shows where it is
 });
-$("u-token-save").onclick = () => {
-  try { sessionStorage.setItem(KEY, $<HTMLInputElement>("u-token-in").value.trim()); } catch { /* storage blocked */ }
-  render();
-};
 
 void tick();
 setInterval(tick, 4000);

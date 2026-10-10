@@ -2,7 +2,6 @@
 import fs from "node:fs";
 import { readBody, send } from "../lib/http.mjs";
 import { createDetect } from "../lib/detect.mjs";
-import { tokenOk } from "./sensors.mjs";
 import { clientIp, limiter, tooMany } from "../lib/limit.mjs";
 
 // Each report runs a Gemini photo check: a few per person, a ceiling for everyone.
@@ -19,7 +18,6 @@ export default function register(api, ctx) {
     send(res, 200, await d.addReport(await readBody(req, 6_000_000)));
   });
   api.post(/^\/api\/reports\/([a-f0-9]{8})\/review$/, async (req, res, m) => {
-    if (!tokenOk(req.headers["x-admin-token"], process.env.ADMIN_TOKEN || "")) return send(res, 401, { error: "admin token required" });
     send(res, 200, d.review(m[1], (await readBody(req)).verdict));
   });
   api.get(/^\/api\/reports\/([a-f0-9]{8})\/photo$/, async (req, res, m) => {

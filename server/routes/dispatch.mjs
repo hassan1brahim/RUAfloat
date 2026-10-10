@@ -1,16 +1,14 @@
 // Dispatch: admin sends a unit to a flagged road or building; the unit console (/unit.html) moves it to "cleared".
-// Writes need the admin token. Records stay on this server; nothing reaches a real station.
+// Records stay on this server; nothing reaches a real station.
 import fs from "node:fs";
 import path from "node:path";
 import { readBody, send } from "../lib/http.mjs";
 import { createDispatch, nearestUnits } from "../lib/dispatch.mjs";
-import { tokenOk } from "./sensors.mjs";
 
 export default function register(api, ctx) {
   const d = createDispatch({ liveDir: ctx.liveData });
   ctx.dispatch = d;
   const places = JSON.parse(fs.readFileSync(path.join(ctx.webData, "places.json"), "utf8"));
-  const admin = (req) => tokenOk(req.headers["x-admin-token"], process.env.ADMIN_TOKEN || "");
 
   api.get("/api/dispatch", async (req, res) => send(res, 200, d.list()));
   api.get("/api/dispatch/units", async (req, res, m, url) => {
@@ -19,11 +17,9 @@ export default function register(api, ctx) {
     send(res, 200, nearestUnits(places, lon, lat));
   });
   api.post("/api/dispatch", async (req, res) => {
-    if (!admin(req)) return send(res, 401, { error: "admin token required" });
     send(res, 200, d.add(await readBody(req)));
   });
   api.post(/^\/api\/dispatch\/([a-f0-9]{8})\/advance$/, async (req, res, m) => {
-    if (!admin(req)) return send(res, 401, { error: "admin token required" });
     try {
       send(res, 200, d.advance(m[1], (await readBody(req)).from));
     } catch (e) {
