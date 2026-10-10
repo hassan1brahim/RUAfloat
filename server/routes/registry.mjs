@@ -6,5 +6,6 @@ import nwm from "./nwm.mjs";
 import forecast from "./forecast.mjs";
 import assist from "./assist.mjs";
 import sensors from "./sensors.mjs";
+import admin from "./admin.mjs";
 
-export default [live, guide, detect, sensors, nwm, forecast, assist];
+export default [live, guide, sensors, detect, nwm, forecast, assist, admin];

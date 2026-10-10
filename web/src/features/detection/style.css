@@ -9,3 +9,6 @@
 #r-out img { width: 100%; border-radius: 6px; margin-top: 8px; }
 .sensor-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .sensor-row b.big2 { font: 700 22px var(--mono); }
+.sensor-row .ok { color: var(--ok); }
+.sensor-row .warn { color: var(--warn); }
+.sensor-row .bad { color: var(--bad); }

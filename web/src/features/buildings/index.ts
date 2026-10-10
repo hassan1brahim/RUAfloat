@@ -1,4 +1,5 @@
-/** Rutgers buildings at risk (Facilities records on OSM outlines), campus resources, and air quality during the Ida replay. */
+/** Rutgers buildings on the map (Facilities records on OSM outlines), coloured by flood status, and air quality during the Ida replay.
+ * The ranked "highest risk" list is the admin feature, computed on the server. */
 import type { GeoJSONSource } from "maplibre-gl";
 import type { Feature } from "../../core/app";
 import { $, BASE_FT, getJson } from "../../core/util";
@@ -6,7 +7,6 @@ import "./style.css";
 
 type RuBuilding = { id: string; name: string; use: string; site: string; lon: number; lat: number; ring: [number, number][] | null;
   touch: number; deep: number; kwh?: number; kgal?: number; gsf: number; nsf: number; built?: string; located: string };
-type Campus = { fy: string; water_kgal_per_day: number; electricity_mwh_per_day: number; dining_lb_per_semester: number; notes: string[]; source: string };
 type Air = { station: string; series: [string, number | null, number | null, number | null][] };
 
 const USE: Record<string, string> = { RES: "housing", ACAD: "academic", ADM: "admin", RSCH: "research", SUPT: "support", MED: "clinic", STLIF: "student life", ATH: "athletics", AGRSCH: "agriculture" };
@@ -31,8 +31,7 @@ const feature: Feature = {
   id: "buildings",
   clickPriority: 5,
   async init(app) {
-    let campus: Campus;
-    [buildings, campus, air] = await Promise.all([getJson<RuBuilding[]>("/data/rutgers_buildings.json"), getJson<Campus>("/data/campus.json"), getJson<Air>("/data/air_ida.json")]);
+    [buildings, air] = await Promise.all([getJson<RuBuilding[]>("/data/rutgers_buildings.json"), getJson<Air>("/data/air_ida.json")]);
     const m = app.map, color = ["match", ["get", "status"], "deep", "#ef4444", "touch", "#f59e0b", "near", "#fde047", "#cc0033"] as unknown as string;
     m.addSource("rutgers", { type: "geojson", data: geojson(0) });
     m.addLayer({ id: "rutgers", type: "fill", source: "rutgers", filter: ["==", ["geometry-type"], "Polygon"],
@@ -46,14 +45,6 @@ const feature: Feature = {
     app.toggle("Rutgers buildings", ["rutgers", "rutgers-line", "rutgers-pt"], true, "Facilities", { key: "rutgers" });
     app.legend(`<div><i class="sw" style="background:#f59e0b"></i>RU bldg: water at walls</div><div><i class="sw" style="background:#ef4444"></i>RU bldg: ≥ 30 cm</div>`, { views: "admin", key: "rutgers" });
     app.legend(`<div><i class="sw" style="background:#cc0033;opacity:.6"></i>Rutgers building</div><div><i class="sw" style="background:#f59e0b"></i>Rutgers bldg: water at walls</div>`, { views: "student", key: "rutgers" });
-    app.card({ col: "right", id: "buildings-card", title: "Rutgers buildings at risk", order: 50, html: `<div class="small muted" id="b-summary"></div><ul class="blist" id="b-list"></ul>` });
-    app.card({ col: "right", id: "campus-card", title: "Campus resources", order: 60, extraTitle: ` <span class="src muted">${campus.fy.split(" ")[0]}</span>`, html: `
-      <ul class="contacts">${[
-        ["Water purchased, NB", `${(campus.water_kgal_per_day / 1000).toFixed(2)}M gal/day`],
-        ["Electricity purchased, NB", `${campus.electricity_mwh_per_day.toLocaleString()} MWh/day`],
-        ["Dining food purchased", `${(campus.dining_lb_per_semester / 1e6).toFixed(1)}M lb/semester`],
-      ].map(([k, v]) => `<li><b>${k}</b><span class="mono">${v}</span></li>`).join("")}</ul>
-      <div class="small muted">${campus.notes[0]} Source: ${campus.source}.</div>` });
     app.card({ col: "left", id: "air-card", title: "Air quality · Rutgers PAMS station", order: 60, hidden: true, html: `
       <div class="stats air"><div><b id="a-pm" class="mono">--</b><span>PM2.5 µg/m³</span></div><div><b id="a-o3" class="mono">--</b><span>Ozone ppm</span></div><div><b id="a-no2" class="mono">--</b><span>NO₂ ppm</span></div></div>
       <div class="small muted" id="a-note"></div>` });
@@ -61,14 +52,6 @@ const feature: Feature = {
   update(app) {
     const rise = app.rise();
     (app.map.getSource("rutgers") as GeoJSONSource).setData(geojson(rise));
-    const ranked = buildings.map((b) => ({ b, s: statusOf(b, rise) })).filter((x) => x.s !== "dry").sort((x, y) => x.b.touch - y.b.touch);
-    const n = (k: string) => ranked.filter((x) => x.s === k).length;
-    const housing = ranked.filter((x) => x.s !== "near" && x.b.use.startsWith("RES")).length;
-    $("b-summary").textContent = ranked.length
-      ? `${n("deep") + n("touch")} reached by water (${n("deep")} with ≥ 30 cm${housing ? `, ${housing} housing` : ""}) · ${n("near")} within 3 ft · of ${buildings.length} NB buildings mapped`
-      : `None of the ${buildings.length} mapped NB buildings is within 3 ft of the water at this level.`;
-    $("b-list").innerHTML = ranked.slice(0, 25).map(({ b, s }) =>
-      `<li><span>${b.name}<br><span class="muted">${useLabel(b.use)}${b.kwh ? ` · ${Math.round(b.kwh / 1000).toLocaleString()} MWh/yr` : ""}</span></span><span class="tag ${s}">${s === "deep" ? "≥ 30 cm" : s === "touch" ? "at walls" : "within 3 ft"}</span></li>`).join("");
     // air quality: replay only, station local time
     const card = $("air-card"), river = app.maybe("river");
     card.hidden = app.state.mode !== "ida" || !river;
