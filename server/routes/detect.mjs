@@ -3,6 +3,10 @@ import fs from "node:fs";
 import { readBody, send } from "../lib/http.mjs";
 import { createDetect } from "../lib/detect.mjs";
 import { tokenOk } from "./sensors.mjs";
+import { clientIp, limiter, tooMany } from "../lib/limit.mjs";
+
+// Each report runs a Gemini photo check: a few per person, a ceiling for everyone.
+const perPerson = limiter(5, 10 * 60e3), overall = limiter(120, 60 * 60e3);
 
 export default function register(api, ctx) {
   const d = createDetect({ liveDir: ctx.liveData });
@@ -10,7 +14,10 @@ export default function register(api, ctx) {
   api.get("/api/cameras", async (req, res) => send(res, 200, await d.cameras()));
   api.post("/api/cameras/check", async (req, res) => { const { id, file } = await readBody(req); send(res, 200, await d.checkCamera(id, file)); });
   api.get("/api/reports", async (req, res) => send(res, 200, d.listReports()));
-  api.post("/api/reports", async (req, res) => send(res, 200, await d.addReport(await readBody(req, 6_000_000))));
+  api.post("/api/reports", async (req, res) => {
+    if (!perPerson(clientIp(req)) || !overall("all")) throw tooMany();
+    send(res, 200, await d.addReport(await readBody(req, 6_000_000)));
+  });
   api.post(/^\/api\/reports\/([a-f0-9]{8})\/review$/, async (req, res, m) => {
     if (!tokenOk(req.headers["x-admin-token"], process.env.ADMIN_TOKEN || "")) return send(res, 401, { error: "admin token required" });
     send(res, 200, d.review(m[1], (await readBody(req)).verdict));
