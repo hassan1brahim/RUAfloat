@@ -1,0 +1,63 @@
+{
+ "note": "Live camera AI checks at HackRU F26, graded against the gauge at the same moment.",
+ "checks": [
+  {
+   "camera": "Raritan River at Manville",
+   "file": "NJ_Raritan_River_at_Manville___2026-10-10T16-00-07Z.jpg",
+   "image_time": "2026-10-10T16:00:07Z",
+   "checked_at": "2026-10-10T16:30:19.115Z",
+   "water_state": "normal",
+   "image_usable": true,
+   "confidence": 0.95,
+   "seen": "Water level is similar to the reference image, within normal banks.",
+   "gauge_ft": 4.32,
+   "expected": [
+    "normal",
+    "high_in_banks"
+   ],
+   "agreement": "agrees with gauge",
+   "model": "gemini-3.5-flash-lite"
+  },
+  {
+   "camera": "Lawrence Brook at Westons Mills",
+   "file": "NJ_Lawrence_Brook_at_Westons_Mills___2026-10-10T16-00-02Z.jpg",
+   "image_time": "2026-10-10T16:00:02Z",
+   "checked_at": "2026-10-10T16:30:20.802Z",
+   "water_state": "normal",
+   "image_usable": true,
+   "confidence": 0.95,
+   "seen": "Water level appears comparable to the reference image, within normal bounds.",
+   "gauge_ft": 15.83,
+   "expected": [
+    "normal",
+    "high_in_banks"
+   ],
+   "agreement": "agrees with gauge",
+   "model": "gemini-3.5-flash-lite"
+  },
+  {
+   "camera": "Millstone River at Blackwells Mills",
+   "file": "NJ_Millstone_River_at_Blackwells_Mills___2026-10-10T16-00-07Z.jpg",
+   "image_time": "2026-10-10T16:00:07Z",
+   "checked_at": "2026-10-10T16:30:23.418Z",
+   "water_state": "normal",
+   "image_usable": true,
+   "confidence": 0.95,
+   "seen": "Water level appears virtually identical to the reference image.",
+   "gauge_ft": 1.88,
+   "expected": [
+    "normal",
+    "high_in_banks"
+   ],
+   "agreement": "agrees with gauge",
+   "model": "gemini-3.5-flash-lite"
+  }
+ ],
+ "summary": {
+  "checks": 3,
+  "agrees": 3,
+  "disagrees": 0,
+  "no_visual": 0,
+  "no_gauge": 0
+ }
+}
