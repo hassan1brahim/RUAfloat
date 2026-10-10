@@ -1,0 +1,23 @@
+{
+ "fy": "FY2025 (Jul 2024 - Jun 2025)",
+ "nb_buildings_billed": 344,
+ "water_kgal_per_day": 1749,
+ "electricity_mwh_per_day": 675,
+ "dining_lb_per_semester": 4093246,
+ "dining_semesters": [
+  "Fall2021",
+  "Fall2022",
+  "Fall2023",
+  "Fall2024",
+  "Spring2021",
+  "Spring2022",
+  "Spring2023",
+  "Spring2024",
+  "Spring2025"
+ ],
+ "notes": [
+  "Purchased utilities only: the Busch cogeneration plant's own generation is not included.",
+  "Some campuses (e.g. Busch) are billed through a few master water meters, so per-building water is partial."
+ ],
+ "source": "Rutgers Facilities + Dining datasets"
+}

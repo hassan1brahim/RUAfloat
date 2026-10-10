@@ -1,0 +1,10 @@
+.skip { position: absolute; left: -999px; top: 8px; background: #fff; color: #000; padding: 8px 12px; z-index: 1000; border-radius: 6px; }
+.skip:focus { left: 8px; }
+.voice-btn { background: #1d2a38; }
+.voice-btn.on { background: var(--water); color: #04121c; border-color: var(--water); }
+.voice-log { list-style: none; margin: 0 0 8px; padding: 0; font-size: 13px; max-height: 220px; overflow-y: auto; }
+.voice-log li { padding: 5px 0; border-bottom: 1px solid var(--line); }
+.voice-gate { position: fixed; inset: 0; z-index: 999; background: #04080c; display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; }
+.voice-gate h1 { font-size: 28px; margin: 12px 0; }
+.voice-gate p { font-size: 18px; color: #c3cfdb; line-height: 1.6; }
+.voice-gate .big-icon { font-size: 72px; }

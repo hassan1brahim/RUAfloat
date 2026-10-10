@@ -6,6 +6,9 @@ export const TIERS = { caution: 3, closedWalking: 15, closedVehicles: 30 };
 /** A reading older than this no longer counts as an observation. */
 export const STALE_MS = 15 * 60e3;
 
+/** Readings kept per sensor for the sparkline. */
+export const HISTORY = 60;
+
 /** Water depth from the sensor's distance to the surface; null if the reading is implausible. */
 export function depthCm(mountCm, distanceCm) {
   if (!(distanceCm > 0) || distanceCm > mountCm + 50) return null;
@@ -22,7 +25,7 @@ export function statusFor(depth) {
 }
 
 export function createSensors(config, now = () => Date.now()) {
-  const latest = new Map();
+  const history = new Map();
 
   function addReading(id, body) {
     const s = config.find((c) => c.id === id);
@@ -31,16 +34,17 @@ export function createSensors(config, now = () => Date.now()) {
     const depth = depthCm(s.mount_cm, distance);
     if (depth == null) throw Object.assign(new Error("implausible distance_cm"), { status: 400 });
     const reading = { distance_cm: distance, depth_cm: depth, time: new Date(now()).toISOString() };
-    latest.set(id, reading);
+    history.set(id, [...(history.get(id) || []), reading].slice(-HISTORY));
     return { id, ...reading, status: statusFor(depth) };
   }
 
   function list() {
     return config.map((s) => {
-      const r = latest.get(s.id);
+      const h = history.get(s.id) || [];
+      const r = h.at(-1);
       const fresh = r && now() - Date.parse(r.time) <= STALE_MS;
       return { id: s.id, name: s.name, road: s.road, lat: s.lat, lon: s.lon, mount_cm: s.mount_cm,
-        reading: r || null, stale: !!r && !fresh, status: statusFor(fresh ? r.depth_cm : null) };
+        reading: r || null, history: h, stale: !!r && !fresh, status: statusFor(fresh ? r.depth_cm : null) };
     });
   }
 

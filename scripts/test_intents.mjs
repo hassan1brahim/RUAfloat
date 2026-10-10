@@ -2,8 +2,9 @@
 // Usage: npm run test:intents   (GEMINI_API_KEY set: tests both paths; unset: fallback only)
 import fs from "node:fs";
 
-const data = (f) => JSON.parse(fs.readFileSync(new URL(`../apps/web/public/data/${f}`, import.meta.url), "utf8"));
-const places = data("places.json").map((p) => p.name);
+const data = (f) => JSON.parse(fs.readFileSync(new URL(`../web/public/data/${f}`, import.meta.url), "utf8"));
+// The app sends start-point names (voice/index.ts: guide.starts), not places.json.
+const places = data("starts.json").map((p) => p.name);
 const roads = [...new Set(data("roads.json").names.filter(Boolean))];
 
 // [what the browser heard, expected intent, expected place/road substring or null]
@@ -55,9 +56,9 @@ async function run(label, createAssist) {
 }
 
 let failed = 0;
-if (process.env.GEMINI_API_KEY) failed += await run("gemini", (await import("../apps/server/lib/assist.mjs?gemini")).createAssist);
+if (process.env.GEMINI_API_KEY) failed += await run("gemini", (await import("../server/lib/assist.mjs?gemini")).createAssist);
 const key = process.env.GEMINI_API_KEY;
 delete process.env.GEMINI_API_KEY;
-failed += await run("rules", (await import("../apps/server/lib/gemini.mjs?nokey").then(() => import("../apps/server/lib/assist.mjs?rules"))).createAssist);
+failed += await run("rules", (await import("../server/lib/gemini.mjs?nokey").then(() => import("../server/lib/assist.mjs?rules"))).createAssist);
 if (key) process.env.GEMINI_API_KEY = key;
 process.exit(failed ? 1 : 0);
