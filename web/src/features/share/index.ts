@@ -1,20 +1,11 @@
 /** Share links: ?scenario=ida&t=2021-09-02T16&from=Scott%20Hall&guide=1 opens the app in exactly that state. */
 import type { Feature, Mode } from "../../core/app";
-import { $ } from "../../core/util";
 
 let ready = false;   // the URL is read once at start, before any update can rewrite it
 
 const feature: Feature = {
   id: "share",
-  init(app) {
-    app.card({ col: "right", id: "share-card", title: "Share this view", order: 80, html: `
-      <div class="small muted">The link opens this scenario, time and starting point.</div>
-      <div class="row gap"><button id="btn-share" class="btn ghost small">Copy link</button><span id="share-out" class="small muted" role="status"></span></div>` });
-    $("btn-share").onclick = async () => {
-      try { await navigator.clipboard.writeText(location.href); $("share-out").textContent = "Link copied"; }
-      catch { $("share-out").textContent = location.href; }   // clipboard blocked (http, old browser): show it instead
-    };
-  },
+  init() {},
   async ready(app) {
     const q = app.params, river = app.get("river");
     const sc = q.get("scenario") as Mode | null;

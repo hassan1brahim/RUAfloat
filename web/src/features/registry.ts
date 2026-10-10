@@ -13,6 +13,6 @@ import forecast from "./forecast";
 import voice from "./voice";
 import student from "./student";
 import share from "./share";
-import about from "./about";
+import admin from "./admin";
 
-export const FEATURES: Feature[] = [river, flood, roads, guide, layers, buildings, roadpanel, detection, nwm, forecast, voice, student, share, about];
+export const FEATURES: Feature[] = [river, flood, roads, guide, layers, buildings, roadpanel, detection, nwm, forecast, voice, student, share, admin];

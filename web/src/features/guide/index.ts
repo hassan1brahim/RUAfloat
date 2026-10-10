@@ -60,7 +60,7 @@ const feature: Feature = {
     app.legend(`<div><i class="dot" style="background:#fb923c"></i>Fire station</div>`, { key: "fire" });
     app.setDefaultHint("Click a road for its status · 📍 Pick on map to set your location");
 
-    app.card({ col: "right", student: "left", studentOrder: 30, id: "guide-card", title: "Where do I go?", order: 20, html: `
+    app.card({ student: "left", studentOrder: 30, id: "guide-card", title: "Where do I go?", order: 20, html: `
       <label class="small muted" for="start-select">You are at</label>
       <select id="start-select"><option value="">Choose a place, or pick on the map…</option></select>
       <div class="row gap"><button id="btn-locate" class="btn ghost small"><span aria-hidden="true">◎</span> My location</button><button id="btn-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button></div>
@@ -77,7 +77,7 @@ const feature: Feature = {
         <button id="g-all" class="link small" hidden>Show all steps</button>
         <div id="g-replan" class="replan" hidden>Route re-planned (river level or route options changed). <button id="btn-respeak" class="link">Hear the new route</button></div>
       </div>` });
-    app.card({ col: "right", student: "left", studentOrder: 6, id: "contacts-card", title: "Contact emergency", order: 70, html: `
+    app.card({ student: "left", studentOrder: 6, id: "contacts-card", title: "Contact emergency", order: 70, html: `
       <ul class="contacts">
         <li><b>Emergency</b><a href="tel:911">911</a></li>
         <li><b>Rutgers Police (New Brunswick)</b><a href="tel:7329327111">(732) 932-7111</a></li>
