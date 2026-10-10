@@ -10,5 +10,6 @@ import places from "./places.mjs";
 import sensors from "./sensors.mjs";
 import admin from "./admin.mjs";
 import dispatch from "./dispatch.mjs";
+import rain from "./rain.mjs";
 
-export default [live, guide, sensors, detect, nwm, forecast, assist, agent, places, dispatch, admin];
+export default [live, guide, sensors, detect, nwm, forecast, assist, agent, places, dispatch, admin, rain];

@@ -2,7 +2,7 @@
 .ml-h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .ml-h b { color: #fdba74; }
 .ml-dot { width: 9px; height: 9px; border-radius: 50%; background: #fb923c; display: inline-block; }
-.ml-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0 2px; }
+.ml-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 6px; margin: 6px 0 2px; }
 .ml-chip { display: flex; flex-direction: column; gap: 1px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
 .ml-chip small { font-size: 10px; color: var(--muted); }
 .ml-chip b { font: 700 15px var(--mono); white-space: nowrap; }

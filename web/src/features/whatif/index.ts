@@ -1,6 +1,6 @@
 /**
  * What-if, extended from "pick a river level" to "what happens next":
- * - Forecast: our ML model (0–12 h) + the NWS forecast (to 48 h) with an error band; the map plays through it and
+ * - Forecast: our ML model, 18 h ahead, with an error band; the map plays through it and
  *   every road and Rutgers building that floods is listed with when, the level, and how sure we are.
  * - Past flood, Ida 2021: what our model forecast at each hour vs what happened, and how many hours of warning
  *   each road would have had.
@@ -16,6 +16,10 @@ import "./style.css";
 type View = "level" | "forecast" | "ida";
 type Ml = { issued: string; now_ft: number; predictions: { h: number; ft: number }[]; scores: Record<string, { mae_ft_high_water: number | null }>; error?: string };
 type Building = { name: string; touch: number; lon: number; lat: number };
+
+/** The simulated clock while a What-if replay is on screen, so other features (rain) can follow the same moment. */
+export type SimClock = { kind: "forecast" | "ida"; t: number };
+declare module "../../core/app" { interface Services { simClock: () => SimClock | null } }
 
 const NEVER = 65535;
 let view: View = "level", wasWhatIf = false;
@@ -34,7 +38,9 @@ const toasts: { text: string; until: number }[] = [];
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const hoursFrom = (a: number, b: number) => Math.round((b - a) / 3600e3);
-const errOf = (m: Ml | null) => Object.fromEntries([3, 6, 12].map((h) => [h, m?.scores?.[`${h}h`]?.mae_ft_high_water ?? [0.25, 0.63, 1.87][[3, 6, 12].indexOf(h)]]));
+// Held-out high-water error per horizon; the fallbacks are the last trained scores, used until the live model answers.
+const FALLBACK_ERR: Record<number, number> = { 3: 0.25, 6: 0.63, 12: 1.87, 18: 2.5 };
+const errOf = (m: Ml | null) => Object.fromEntries((m?.predictions?.map((p) => p.h) ?? [3, 6, 12, 18]).map((h) => [h, m?.scores?.[`${h}h`]?.mae_ft_high_water ?? FALLBACK_ERR[h] ?? 2.5]));
 const catLabel = (ft: number) => { const c = catOf(ft); return c === "normal" ? "no flooding" : c === "action" ? "action stage, just below flooding" : `${c} flooding`; };
 const hrs = (n: number) => `${n} hour${n === 1 ? "" : "s"}`;
 
@@ -60,13 +66,13 @@ function buildItems(app: App, buildings: Building[]) {
 function liveTimeline(app: App): Point[] | null {
   const g = app.get("river").live()?.gauge;
   if (!g || !ml || ml.error) return null;
-  return buildTimeline({ start: Date.parse(g.observed.validTime), nowFt: g.observed.primary, ml: ml.predictions, err: errOf(ml), nws: g.forecastSeries, hours: 48 });
+  return buildTimeline({ start: Date.parse(g.observed.validTime), nowFt: g.observed.primary, ml: ml.predictions, err: errOf(ml), hours: 18 });
 }
 
 function idaTimeline(app: App): Point[] {
   const h = idaHours[idaIssue], series = app.get("river").ida.series;
   const actual = (t: number) => { const p = series.find(([s]) => Math.abs(Date.parse(s) - t) < 1800e3); return p ? p[1] : null; };
-  return buildTimeline({ start: Date.parse(h.t), nowFt: h.now, ml: [3, 6, 12].map((x) => ({ h: x, ft: h.pred[`${x}h`] })), err: errOf(ml), hours: 12, actual });
+  return buildTimeline({ start: Date.parse(h.t), nowFt: h.now, ml: Object.keys(h.pred).map((k) => ({ h: parseInt(k), ft: h.pred[k] })), err: errOf(ml), hours: Math.max(...Object.keys(h.pred).map((k) => parseInt(k))), actual });
 }
 
 function chart(points: Point[], cursor: number, cursorFt = points[cursor]?.ft) {
@@ -273,7 +279,7 @@ function select(app: App, v: View, applySlider = true) {
 const BODY = `
   <div id="wf-issue-row" class="wf-issue"><label class="small muted" for="wf-issue">Forecast issued at (Ida, Sept 2021)</label><select id="wf-issue"></select></div>
   <div id="wf-chart"></div>
-  <div class="small muted wf-legend"><span class="sw model"></span>our model <span class="sw nws"></span>NWS <span class="sw band"></span>error range <span class="sw actual"></span>what actually happened <span class="sw flood"></span>flood stage 28 ft</div>
+  <div class="small muted wf-legend"><span class="sw model"></span>our model <span class="sw band"></span>error range <span class="sw actual"></span>what actually happened <span class="sw flood"></span>flood stage 28 ft</div>
   <div class="wf-sim">
     <div class="seg wf-case" id="wf-case" role="group" aria-label="Which case to simulate">
       <button data-c="expected" class="on" aria-pressed="true">Expected</button><button data-c="worst" aria-pressed="false">Worst case</button><button data-c="best" aria-pressed="false">Best case</button>
@@ -288,7 +294,7 @@ const BODY = `
   <h3 id="wf-head" class="wf-h3"></h3>
   <p id="wf-already" class="small muted"></p>
   <ol id="wf-list" class="wf-list"></ol>
-  <p class="small muted">Forecasts are estimates. Error range = our model's typical error at high water on years it never trained on (2021, 2023, 2024); past 12 h the NWS publishes no error, so the 12 h error is assumed. Flood depths come from an elevation model, not a survey.</p>`;
+  <p class="small muted">Forecasts are estimates. Error range = our model's typical error at high water on years it never trained on (2021, 2023, 2024). Flood depths come from an elevation model, not a survey.</p>`;
 
 function wire(app: App) {
   $("wf-issue-row").hidden = view !== "ida";
@@ -306,8 +312,8 @@ function wire(app: App) {
     if (playing) return stop();
     if (pos >= timeline.length - 1) jump(app, 0);
     $("wf-play").textContent = "❚❚ Pause";
-    // 1× = one simulated hour per second for Ida (12 h), per 0.4 s for the 48 h forecast; 20 frames a second.
-    const hoursPerFrame = (view === "ida" ? 1 / 20 : 1 / 8) * 1;
+    // 1× = one simulated hour per second (18 h); 20 frames a second.
+    const hoursPerFrame = 1 / 20;
     playing = window.setInterval(() => {
       if (pos >= timeline.length - 1) return stop();
       seek(app, pos + hoursPerFrame * speed, true);
@@ -330,10 +336,11 @@ function spoken(app: App) {
 const feature: Feature = {
   id: "whatif",
   async init(app) {
+    app.provide("simClock", () => (app.state.mode === "whatif" && view !== "level" && timeline.length ? { kind: view, t: timeline[0].t + pos * 3600e3 } : null));
     app.card({ col: "left", id: "wf-card", title: "What happens next?", order: 12, hidden: true, html: `
       <div class="seg" id="wf-seg" role="group" aria-label="What-if view">
         <button data-v="level" class="on" aria-pressed="true">Pick a level</button>
-        <button data-v="forecast" aria-pressed="false">Forecast (48 h)</button>
+        <button data-v="forecast" aria-pressed="false">Forecast (18 h)</button>
         <button data-v="ida" aria-pressed="false">Past flood: Ida</button>
       </div>
       <div id="wf-ida" class="wf-ida" hidden><p id="wf-ida-head"></p><p id="wf-ida-sub" class="small muted"></p><ul id="wf-ida-list" class="small"></ul></div>
@@ -374,7 +381,7 @@ const feature: Feature = {
       forecast_window_hours: f.points.length - 1,
       forecast_peak_ft: Math.max(...f.points.map((p) => p.ft)),
       forecast_closures: roads.slice(0, 10).map((c) => ({ name: c.name, at: et(new Date(c.at).toISOString()), in_hours: hoursFrom(start, c.at), river_ft: c.ftAt, confidence: c.confidence })),
-      forecast_note: roads.length ? "Forecast from our ML model (0–12 h) and the NWS (to 48 h). Estimates, not certainties." : `No roads are forecast to flood in the next ${f.points.length - 1} hours.`,
+      forecast_note: roads.length ? "Forecast from our ML model, 18 hours ahead. Estimates, not certainties." : `No roads are forecast to flood in the next ${f.points.length - 1} hours.`,
     };
   },
 };

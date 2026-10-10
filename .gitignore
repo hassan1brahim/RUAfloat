@@ -3,3 +3,6 @@ node_modules/
 data/live/
 hardware/**/secrets.h
 web/dist/
+
+# training downloads (pipeline/)
+data/raw/

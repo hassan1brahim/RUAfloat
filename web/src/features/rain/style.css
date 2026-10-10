@@ -1,0 +1,5 @@
+.rain-chip { justify-self: start; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 2px 8px; border-radius: 99px; background: #1d2a38; color: #cbd5e1; }
+.rain-chip.watch { background: #3a2a0d; color: #fde047; }
+.rain-chip.warning { background: #3a0d12; color: #fecaca; }
+.rain-pop { display: grid; gap: 4px; max-width: 300px; }
+.rain-events { margin: 4px 0 0; padding-left: 16px; font-size: 12px; }
