@@ -14,10 +14,11 @@ const feature: Feature = {
     const [w, s, e, n] = grid.meta.bounds;
     app.map.addSource("flood", { type: "canvas", canvas: grid.canvas, animate: false, coordinates: [[w, n], [e, n], [e, s], [w, s]] });
     app.map.addLayer({ id: "flood", type: "raster", source: "flood", paint: { "raster-opacity": 0.92, "raster-fade-duration": 0 } }, "buildings");
-    app.toggle("Flood extent", ["flood"]);
-    app.toggle("3D buildings", ["buildings"]);
+    app.toggle("Flood zone (predicted water)", ["flood"], true, "Flooding", { key: "flood" });
+    app.toggle("3D buildings", ["buildings"], true, "Base map", { views: "admin" });
     app.legend(`<div><i class="sw" style="background:#7dd3fc"></i>&lt; 30 cm</div><div><i class="sw" style="background:#3898ec"></i>30 cm–1 m</div>
-      <div><i class="sw" style="background:#1d63d6"></i>1–2.5 m</div><div><i class="sw" style="background:#17379f"></i>&gt; 2.5 m</div>`);
+      <div><i class="sw" style="background:#1d63d6"></i>1–2.5 m</div><div><i class="sw" style="background:#17379f"></i>&gt; 2.5 m</div>`, { views: "admin", key: "flood" });
+    app.legend(`<div><i class="sw" style="background:linear-gradient(90deg,#7dd3fc,#17379f)"></i>Flood water (darker = deeper)</div>`, { views: "student", key: "flood" });
     app.provide("grid", grid);
     app.provide("floodedKm2", () => km2);
   },
