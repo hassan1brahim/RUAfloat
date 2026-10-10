@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#080c11" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23cc0033'/%3E%3Cpath d='M4 21c4-4 8 4 12 0s8 4 12 0' stroke='white' stroke-width='3' fill='none'/%3E%3C/svg%3E" />
+  <title>HackRU-26 · Unit Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+</head>
+<body class="unit">
+  <header class="unit-top">
+    <h1>Unit Console</h1>
+    <button id="u-sound" class="btn small">Tap to turn on alert sound</button>
+  </header>
+  <main class="unit-main">
+    <div id="u-token" hidden class="row gap"><input id="u-token-in" class="u-input" type="password" placeholder="Admin token" aria-label="Admin token" /><button id="u-token-save" class="btn small">Save</button></div>
+    <section id="u-incoming" aria-live="assertive"></section>
+    <ul id="u-active" class="u-list"></ul>
+    <h2>Cleared</h2>
+    <ul id="u-cleared" class="u-list cleared"></ul>
+    <p class="muted small">Demo stand-in for a unit's phone. Shows what the admin view sends; nothing here reaches a real station.</p>
+  </main>
+  <script type="module" src="/src/unit/main.ts"></script>
+</body>
+</html>

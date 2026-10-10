@@ -67,3 +67,14 @@ test("review queue: recent, unreviewed, not clearly dry", () => {
   ], now);
   assert.deepEqual(q.map((x) => x.id), ["water", "unclear"]);
 });
+
+test("roads: the map point is where the road floods first", () => {
+  const withNodes = { ...roads, edges: [...roads.edges, [3, 4, 30, dm(24), 0, 0, 2, dm(25), dm(23)]], nodes: [1, 1, 2, 2, 3, 3, 4, 4, 5, 5] };
+  const river = roadTimeline(withNodes, 18, null).roads.find((r) => r.name === "River Road");
+  assert.deepEqual([river.lon, river.lat], [4, 4]);
+});
+
+test("feed: dispatch steps show who went where", () => {
+  const d = { unit: "RUPD", target: "River Road", history: [{ status: "pending", at: "2026-10-10T10:00Z" }, { status: "en-route", at: "2026-10-10T10:03Z" }] };
+  assert.deepEqual(feed({ dispatches: [d] }).map((e) => e.text), ["Dispatch: RUPD en route at River Road", "Dispatch: RUPD sent to River Road"]);
+});

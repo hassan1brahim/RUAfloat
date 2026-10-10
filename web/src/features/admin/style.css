@@ -10,7 +10,7 @@
 .alist.review li { justify-content: flex-start; align-items: flex-start; }
 .alist.review img { width: 84px; height: 64px; object-fit: cover; border-radius: 6px; flex: none; background: #000; }
 .alist.review .row { margin-top: 6px; }
-#adm-token { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.adm-token { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 b.warn, span.warn { color: var(--warn); }
 b.bad { color: var(--bad); }
 .count { font: 700 11px var(--mono); background: var(--scarlet); color: #fff; border-radius: 99px; padding: 0 7px; }
@@ -20,3 +20,7 @@ b.bad { color: var(--bad); }
 .feed li.warn { border-color: var(--warn); }
 .feed li.bad { border-color: var(--bad); }
 .feed li.ok { border-color: var(--ok); }
+.disp-on { color: var(--water); font: 600 11px var(--mono); text-transform: uppercase; }
+.disp-form { display: flex; flex-direction: column; gap: 6px; padding: 8px; margin-bottom: 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
+.disp-form select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.alist.disp li.pending b { color: var(--warn); }
