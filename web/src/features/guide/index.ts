@@ -10,6 +10,8 @@ import "./style.css";
 
 /** Replays use this start when the user is off campus, so the demo works from anywhere. */
 const DEMO_START = "Scott Hall";
+/** Destinations further than this are not offered, unless nothing dry is closer. */
+const MAX_WALK_MIN = 20;
 
 export type Start = { name: string; lon: number; lat: number };
 export type Guide = {
@@ -83,9 +85,11 @@ const feature: Feature = {
       <p class="safety-note">If location is on and no place is chosen, it will route you immediately to the nearest safe spot.</p>
       </div>
       <div id="guide-out" class="guide-out" hidden>
-        <div class="dest" id="g-dest" tabindex="-1"></div><blockquote id="g-script"></blockquote>
-        <div class="row gap small"><button id="btn-replay" class="btn ghost small"><span aria-hidden="true">↻</span> Play again</button><span id="g-voice" class="muted"></span></div>
-        <div class="badge-row" id="g-by"></div><ol class="steps" id="g-steps"></ol>
+        <div class="dest" id="g-dest" tabindex="-1"></div>
+        <div class="row gap small"><button id="btn-replay" class="btn ghost small"><span aria-hidden="true">🔊</span> Read aloud</button></div>
+        <!-- spoken script, voice and AI-guard details: kept for debugging and a possible Admin view, not shown to students -->
+        <blockquote id="g-script" hidden></blockquote><span id="g-voice" hidden></span><div class="badge-row" id="g-by" hidden></div>
+        <ol class="steps" id="g-steps"></ol>
         <div class="onestep" id="g-onestep" hidden>
           <div class="row"><span class="mono small muted" id="g-steplbl"></span></div>
           <div class="steptext" id="g-steptext" aria-live="polite"></div>
@@ -300,7 +304,7 @@ const feature: Feature = {
       ].join("");
       lastScript = res.script;
       btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Route from this place`;
-      if (!silent) void speak(res.script);
+      // Nothing is spoken automatically: the student presses Read aloud. (`silent` stays for callers like the voice agent.)
       return { script: res.script, plan: p };
     }
 
@@ -357,11 +361,14 @@ function targets(rise: number): Place[] {
 /** One button per dry gathering point; its text is everything a screen reader user needs to choose. */
 function renderDestinations(app: App) {
   const obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
-  const all = app.get("router").reachable(start!.lon, start!.lat, app.rise(), places, obs.closed);
+  const reach = app.get("router").reachable(start!.lon, start!.lat, app.rise(), places, obs.closed);
+  // Only walks of 20 minutes or less; if nothing dry is that close, just the nearest one.
+  const near = reach.filter((x) => x.minutes <= MAX_WALK_MIN);
+  const all = near.length ? near : reach.slice(0, 1);
   const html = all.slice(0, 6).map(({ place: p, meters, minutes }, i) => {
     const on = plan?.dest.name === p.name;
     return `<li><button class="dest-btn${on ? " on" : ""}" data-dest="${i === 0 ? "" : esc(p.name)}" aria-pressed="${on}">
-      <b>${esc(p.name)}</b><span>${Math.max(1, Math.round(minutes))} minute walk · ${(meters / 1000).toFixed(1)} km · predicted to stay dry${p.capacity ? ` · room for about ${p.capacity.toLocaleString()} people` : ""}${p.campus ? ` · ${esc(p.campus)}` : ""}${i === 0 ? " · nearest" : ""}</span></button></li>`;
+      <b>${esc(p.name)}</b><span>${Math.max(1, Math.round(minutes))} minute walk · ${(meters / 1000).toFixed(1)} km · predicted to stay dry${p.capacity ? ` · room for about ${p.capacity.toLocaleString()} people` : ""}${p.campus ? ` · ${esc(p.campus)}` : ""}${i === 0 ? (minutes > MAX_WALK_MIN ? " · nearest, a long walk" : " · nearest") : ""}</span></button></li>`;
   }).join("") || `<li class="muted">No dry gathering point reachable on foot.</li>`;
   if (html !== destShown) $("dest-list").innerHTML = destShown = html;   // untouched unless it changed, so VoiceOver doesn't lose its place
 }
