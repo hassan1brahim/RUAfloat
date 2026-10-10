@@ -2,12 +2,14 @@
 import type { Feature } from "../../core/app";
 import { $, catOf } from "../../core/util";
 import { DRY_MARGIN_DM } from "../../lib/route";
+import { screenReaderMode, setScreenReaderMode } from "../../lib/speech";
 import "./style.css";
 
-type Option = { key: "noStairs" | "readAloud"; label: string; desc: string };
+type Option = { key: "noStairs" | "readAloud" | "screenReader"; label: string; desc: string };
 const OPTIONS: Option[] = [
   { key: "noStairs", label: "Step-free route", desc: "Routes skip every mapped staircase. For wheelchairs, crutches, strollers." },
   { key: "readAloud", label: "Read directions aloud", desc: "Speaks each direction when you press Next." },
+  { key: "screenReader", label: "I use a screen reader", desc: "VoiceOver, TalkBack: the app stops playing its own voice and sends everything to your screen reader." },
 ];
 const SIZES = [["", "Default"], ["text-md", "Medium"], ["text-lg", "Large"]] as const;
 
@@ -53,7 +55,7 @@ const feature: Feature = {
     // switches
     const opts = $("a11y-opts");
     const render = () => {
-      opts.innerHTML = OPTIONS.map((o) => { const on = app.state.access[o.key];
+      opts.innerHTML = OPTIONS.map((o) => { const on = o.key === "screenReader" ? screenReaderMode() : app.state.access[o.key];
         return `<button class="a11y-opt${on ? " on" : ""}" data-k="${o.key}" role="switch" aria-checked="${on}">
           <span><b>${o.label}</b><span class="small muted">${o.desc}</span></span><span class="switch" aria-hidden="true"></span></button>`; }).join("");
     };
@@ -61,6 +63,7 @@ const feature: Feature = {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-k]");
       if (!b) return;
       const k = b.dataset.k as Option["key"];
+      if (k === "screenReader") { setScreenReaderMode(!screenReaderMode()); return render(); }   // speech-only: no re-plan
       app.state.access[k] = !app.state.access[k];
       render();
       app.refresh();   // the guide re-plans with or without stairs
