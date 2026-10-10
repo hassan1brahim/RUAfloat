@@ -1,7 +1,8 @@
 /** "Where do I go?": start point, nearest dry gathering point, walking route, spoken script (AI + guard), contacts. */
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
-import type { Feature, Pt } from "../../core/app";
+import type { App, Feature, Pt } from "../../core/app";
 import { $, esc, fmtFt, getJson, postJson } from "../../core/util";
+import { announce } from "../../lib/speech";
 import { DRY_MARGIN_DM, type Place, type Plan } from "../../lib/route";
 import { onSpeak, speak } from "../../lib/speech";
 import { NO_OBSERVATIONS } from "../roads";
@@ -16,6 +17,8 @@ export type Guide = {
 declare module "../../core/app" { interface Services { guide: Guide } }
 
 type Res = { script: string; by: string; check: string[]; rejected?: string; fixes?: string[] };
+/** A gathering point the student chose instead of the nearest one; null = nearest. */
+let chosen: Place | null = null, destShown = "";
 let places: Place[] = [], starts: Start[] = [], start: Start | null = null, plan: Plan | null = null, lastScript = "", stepIdx = 0, stepsMode = "", showAll = false;
 const KINDS = [["gather", "Help meetup spots", "#22c55e"], ["hospital", "Hospitals", "#f472b6"], ["police", "Police", "#60a5fa"], ["fire", "Fire stations", "#fb923c"]] as const;
 let marker: maplibregl.Marker | null = null;
@@ -63,6 +66,10 @@ const feature: Feature = {
     app.card({ student: "left", studentOrder: 30, id: "guide-card", title: "Where do I go?", order: 20, html: `
       <label class="small muted" for="start-select">You are at</label>
       <select id="start-select"><option value="">Choose a place, or pick on the map…</option></select>
+      <label class="small muted" for="place-q" style="display:block;margin-top:8px">Or search any building</label>
+      <div class="row"><input id="place-q" type="search" placeholder="e.g. LSM, Hill Center, Scott Hall" autocomplete="off" /></div>
+      <div id="place-n" class="sr-only" role="status"></div>
+      <ul id="place-results" class="place-results" aria-label="Search results"></ul>
       <div class="row gap"><button id="btn-locate" class="btn ghost small"><span aria-hidden="true">◎</span> My location</button><button id="btn-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button></div>
       <div class="row gap"><button id="btn-guide" class="btn primary"><span aria-hidden="true">🔊</span> Find my route</button></div>
       <div id="guide-out" class="guide-out" hidden>
@@ -75,6 +82,8 @@ const feature: Feature = {
           <div class="row gap"><button id="g-prev" class="btn ghost small">Back</button><button id="g-next" class="btn small">Next direction</button></div>
         </div>
         <button id="g-all" class="link small" hidden>Show all steps</button>
+        <h3 class="dest-h" id="dest-h">Where to go</h3>
+        <ul id="dest-list" class="dest-list" aria-labelledby="dest-h"></ul>
         <div id="g-replan" class="replan" hidden>Route re-planned (river level or route options changed). <button id="btn-respeak" class="link">Hear the new route</button></div>
       </div>` });
     app.card({ student: "left", studentOrder: 6, id: "contacts-card", title: "Contact emergency", order: 70, html: `
@@ -105,7 +114,41 @@ const feature: Feature = {
       () => app.hint("Location unavailable: pick on the map instead"),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 
+    // Search: the same 324-building index the voice agent uses. Results are plain buttons a screen reader can read.
+    const q = $<HTMLInputElement>("place-q"), results = $("place-results");
+    let qTimer = 0;
+    q.oninput = () => {
+      clearTimeout(qTimer);
+      const text = q.value.trim();
+      if (text.length < 2) { results.innerHTML = ""; $("place-n").textContent = ""; return; }
+      qTimer = window.setTimeout(async () => {
+        let r: { matches?: { name: string; lon: number; lat: number; campus: string | null }[]; note?: string; error?: string };
+        try { r = await getJson(`/api/places/search?q=${encodeURIComponent(text)}`); } catch { r = { error: "search unavailable" }; }
+        const m = (r.matches ?? []).filter((x) => app.get("grid").cellAt(x.lon, x.lat) >= 0);
+        results.innerHTML = m.map((x, i) => `<li><button class="btn ghost small" data-i="${i}">${esc(x.name)}${x.campus ? `<span class="muted">, ${esc(x.campus)}</span>` : ""}</button></li>`).join("");
+        results.onclick = (e) => {
+          const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-i]");
+          if (!b) return;
+          const x = m[+b.dataset.i!];
+          setStart({ name: x.name, lon: x.lon, lat: x.lat });
+          results.innerHTML = ""; q.value = "";
+          announce(`Starting point: ${x.name}. Press Find my route.`);
+          $("btn-guide").focus();
+        };
+        $("place-n").textContent = r.error ? "Search unavailable." : m.length ? `${m.length} result${m.length > 1 ? "s" : ""}${r.note ? `. ${r.note}` : ""}` : "No matches in the area this app covers.";
+      }, 300);
+    };
+
+    // Where to go: every dry gathering point, nearest walk first. The button text carries the place information.
+    $("dest-list").onclick = (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-dest]");
+      if (!b) return;
+      chosen = b.dataset.dest === "" ? null : places.find((p) => p.name === b.dataset.dest) ?? null;
+      void run();
+    };
+
     function setStart(s: Start) {
+      chosen = null;   // a new start: back to the nearest dry point
       // A new starting point makes the old route wrong: clear it so nothing (screen, voice agent, Map in words) reads it.
       if (start && plan && (start.lon !== s.lon || start.lat !== s.lat)) {
         plan = null;
@@ -170,8 +213,9 @@ const feature: Feature = {
       btn.disabled = true; btn.textContent = "Planning…";
       $("guide-out").hidden = false; $("g-replan").hidden = true;
       const rise = app.rise(), s = start, obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
-      const p = app.get("grid").depthAt(s.lon, s.lat, rise) >= 3 ? null : app.get("router").plan(s.lon, s.lat, rise, places, obs.closed, app.state.access.noStairs);
+      const p = app.get("grid").depthAt(s.lon, s.lat, rise) >= 3 ? null : app.get("router").plan(s.lon, s.lat, rise, targets(rise), obs.closed, app.state.access.noStairs);
       showPlan(p);
+      if (p) renderDestinations(app);
       // Screen-reader users land on the result instead of staying on the button with no idea where it appeared.
       $("g-dest").focus();
       if (p) {
@@ -219,11 +263,12 @@ const feature: Feature = {
     $("s-gather").textContent = `${gathers.filter((p) => p.block > rise + DRY_MARGIN_DM).length}/${gathers.length}`;
     if (plan && start) {
       const obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
-      const next = app.get("router").plan(start.lon, start.lat, rise, places, obs.closed, app.state.access.noStairs);
+      const next = app.get("router").plan(start.lon, start.lat, rise, targets(rise), obs.closed, app.state.access.noStairs);
       const changed = !next || next.dest.name !== plan.dest.name || Math.abs(next.meters - plan.meters) > 25;
       if (changed) { showPlanRef(next); $("g-replan").hidden = false; }
     }
     if (stepsMode !== `${showAll}|${app.state.view}`) renderStepsRef();
+    if (plan && start) renderDestinations(app);
   },
   click(app, pt, ev) {
     const f = app.map.queryRenderedFeatures(ev.point, { layers: ["places"] })[0];
@@ -243,5 +288,23 @@ const feature: Feature = {
   },
 };
 let showPlanRef: (p: Plan | null) => void = () => {};
+
+/** The chosen gathering point while it stays dry; otherwise every place, so the planner picks the nearest. */
+function targets(rise: number): Place[] {
+  if (chosen && chosen.block <= rise + DRY_MARGIN_DM) chosen = null;   // it flooded: fall back to the nearest
+  return chosen ? [chosen] : places;
+}
+
+/** One button per dry gathering point; its text is everything a screen reader user needs to choose. */
+function renderDestinations(app: App) {
+  const obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
+  const all = app.get("router").reachable(start!.lon, start!.lat, app.rise(), places, obs.closed, app.state.access.noStairs);
+  const html = all.slice(0, 6).map(({ place: p, meters, minutes }, i) => {
+    const on = plan?.dest.name === p.name;
+    return `<li><button class="dest-btn${on ? " on" : ""}" data-dest="${i === 0 ? "" : esc(p.name)}" aria-pressed="${on}">
+      <b>${esc(p.name)}</b><span>${Math.max(1, Math.round(minutes))} minute walk · ${(meters / 1000).toFixed(1)} km · predicted to stay dry${p.capacity ? ` · room for about ${p.capacity.toLocaleString()} people` : ""}${p.campus ? ` · ${esc(p.campus)}` : ""}${i === 0 ? " · nearest" : ""}</span></button></li>`;
+  }).join("") || `<li class="muted">No dry gathering point reachable on foot.</li>`;
+  if (html !== destShown) $("dest-list").innerHTML = destShown = html;   // untouched unless it changed, so VoiceOver doesn't lose its place
+}
 let renderStepsRef: () => void = () => {};
 export default feature;
