@@ -109,9 +109,8 @@ export class App {
       b.setAttribute("aria-pressed", String(b.dataset.view === v));
     });
     document.querySelectorAll<HTMLElement>(".col > .card").forEach((el) => this.place(el));
-    // What-if and replays are Admin tools: switching to Student view goes back to the live river
-    // (which also stops any replay or simulation). Demo links like ?scenario=ida apply after start, so they still work.
-    if (v === "student" && this.state.mode !== "live") this.maybe("river")?.setMode("live");
+    // Students have no scenario controls: they see whatever drill the admin is running (or the live river).
+    if (v === "student") this.maybe("drill")?.follow();
     this.map?.resize();
     this.update();
   }
