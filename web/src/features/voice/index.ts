@@ -29,12 +29,12 @@ const feature: Feature = {
 
     document.body.insertAdjacentHTML("afterbegin", `
       <a class="skip" href="#btn-voice" id="skip-voice">Skip to voice assistant</a>
-      <div id="voice-gate" class="voice-gate" role="button" tabindex="0" aria-label="Press any key or tap anywhere to start the RUAfloat voice assistant" hidden>
-        <div><div class="big-icon" aria-hidden="true">🎧</div><h1>RUAfloat voice assistant</h1><p>Press any key or tap anywhere to start.<br>It will tell you what the river is doing and where to go.</p></div>
+      <div id="voice-gate" class="voice-gate" role="button" tabindex="0" aria-label="Press any key or tap anywhere to start the RU Afloat voice assistant" hidden>
+        <div><div class="big-icon" aria-hidden="true">🎧</div><h1>RU Afloat voice assistant</h1><p>Press any key or tap anywhere to start.<br>It will tell you what the river is doing and where to go.</p></div>
       </div>`);
     const btn = document.createElement("button");
     // Visible to everyone: the Accessibility panel that used to start voice mode is gone, and a demo has to show it.
-    btn.id = "btn-voice"; btn.className = "btn small voice-btn"; btn.title = "Talk to RUAfloat (V)";
+    btn.id = "btn-voice"; btn.className = "btn small voice-btn"; btn.title = "Talk to RU Afloat (V)";
     btn.setAttribute("aria-pressed", "false"); btn.setAttribute("aria-describedby", "voice-help");
     // the help text sits outside the button so it is the description, not part of the name
     btn.innerHTML = `<span aria-hidden="true">🎧</span><span class="lbl"> Talk</span>`;

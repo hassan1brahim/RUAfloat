@@ -1,4 +1,4 @@
-// Creates (or updates) the RUAfloat voice guide on ElevenLabs Agents and saves its id to .env.
+// Creates (or updates) the RU Afloat voice guide on ElevenLabs Agents and saves its id to .env.
 // Run once: `npm run agent:setup` (needs ELEVENLABS_API_KEY with ElevenLabs Agents write permission).
 // The agent only talks; every fact and every route comes from the app through client tools.
 import fs from "node:fs";
@@ -13,7 +13,7 @@ const LLM = process.env.ELEVENLABS_AGENT_LLM || "gemini-2.5-flash";
 const API = "https://api.elevenlabs.io/v1/convai";
 if (!KEY) { console.error("ELEVENLABS_API_KEY is not set (source .env first)."); process.exit(1); }
 
-const PROMPT = `You are R U Afloat (written RUAfloat), a calm voice guide for blind and low-vision people at Rutgers University New Brunswick during flooding of the Raritan River. The person cannot see the screen. Everything you say is heard, never read.
+const PROMPT = `You are R U Afloat (written RU Afloat), a calm voice guide for blind and low-vision people at Rutgers University New Brunswick during flooding of the Raritan River. The person cannot see the screen. Everything you say is heard, never read.
 
 Safety rules, always:
 - Only state facts that come from your tools. Never guess river levels, road conditions, building names, distances or routes. If a tool does not give you something, say you don't know.
@@ -81,7 +81,7 @@ if (agentId) {
   await call("PATCH", `${API}/agents/${agentId}`, { conversation_config });
   console.log(`updated agent ${agentId}`);
 } else {
-  agentId = (await call("POST", `${API}/agents/create`, { name: "RUAfloat", conversation_config })).agent_id;
+  agentId = (await call("POST", `${API}/agents/create`, { name: "RU Afloat", conversation_config })).agent_id;
   const env = fs.existsSync(ENV) ? fs.readFileSync(ENV, "utf8") : "";
   fs.writeFileSync(ENV, env.replace(/\n?$/, "\n") + `ELEVENLABS_AGENT_ID=${agentId}\n`);
   console.log(`created agent ${agentId} and saved ELEVENLABS_AGENT_ID to .env`);

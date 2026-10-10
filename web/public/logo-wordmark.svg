@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 72" role="img" aria-label="RUAfloat">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 72" role="img" aria-label="RU Afloat">
   <circle cx="36" cy="36" r="22" fill="none" stroke="#ffffff" stroke-width="14"/>
   <circle cx="36" cy="36" r="22" fill="none" stroke="#cc0033" stroke-width="14" stroke-dasharray="17.28 17.28" transform="rotate(-22.5 36 36)"/>
   <circle cx="36" cy="36" r="29" fill="none" stroke="#1f2328" stroke-width="1.6"/>
   <circle cx="36" cy="36" r="15" fill="none" stroke="#1f2328" stroke-width="1.6"/>
-  <text x="78" y="47" font-family="Inter, Helvetica, Arial, sans-serif" font-size="32" font-weight="700"><tspan fill="#cc0033">RU</tspan><tspan fill="#1f2328">Afloat</tspan></text>
+  <text x="78" y="47" font-family="Inter, Helvetica, Arial, sans-serif" font-size="32" font-weight="700"><tspan fill="#cc0033">RU</tspan><tspan fill="#1f2328"> Afloat</tspan></text>
 </svg>
