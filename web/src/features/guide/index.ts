@@ -16,7 +16,8 @@ export type Guide = {
 declare module "../../core/app" { interface Services { guide: Guide } }
 
 type Res = { script: string; by: string; check: string[]; rejected?: string; fixes?: string[] };
-let places: Place[] = [], starts: Start[] = [], start: Start | null = null, plan: Plan | null = null, lastScript = "";
+let places: Place[] = [], starts: Start[] = [], start: Start | null = null, plan: Plan | null = null, lastScript = "", stepIdx = 0, stepsMode = "", showAll = false;
+const KINDS = [["gather", "Help meetup spots", "#22c55e"], ["hospital", "Hospitals", "#f472b6"], ["police", "Police", "#60a5fa"], ["fire", "Fire stations", "#fb923c"]] as const;
 let marker: maplibregl.Marker | null = null;
 
 function placesGeoJSON(rise: number) {
@@ -45,29 +46,43 @@ const feature: Feature = {
       paint: { "text-color": "#cfe8d6", "text-halo-color": "#081018", "text-halo-width": 1.5 } });
     m.on("mouseenter", "places", () => (m.getCanvas().style.cursor = "pointer"));
     m.on("mouseleave", "places", () => (m.getCanvas().style.cursor = ""));
-    app.toggle("Facilities", ["places", "places-label"]);
-    app.legend(`<div><i class="dot" style="background:#22c55e"></i>Dry gathering pt</div><div><i class="dot" style="background:#f472b6"></i>Hospital</div>`);
+    const shown = new Set<string>(KINDS.map((k) => k[0]));
+    for (const [kind, label, color] of KINDS) {
+      app.check(`<i class="dot" style="background:${color}"></i>${label}`, true, (on) => {
+        if (on) shown.add(kind); else shown.delete(kind);
+        m.setFilter("places", ["in", ["get", "kind"], ["literal", [...shown]]]);
+        m.setLayoutProperty("places-label", "visibility", shown.has("gather") ? "visible" : "none");
+      }, "Facilities", { key: kind });
+    }
+    app.legend(`<div><i class="dot" style="background:#22c55e"></i>Help meetup spot</div>`, { key: "gather" });
+    app.legend(`<div><i class="dot" style="background:#f472b6"></i>Hospital</div>`, { key: "hospital" });
+    app.legend(`<div><i class="dot" style="background:#60a5fa"></i>Police</div>`, { key: "police" });
+    app.legend(`<div><i class="dot" style="background:#fb923c"></i>Fire station</div>`, { key: "fire" });
     app.setDefaultHint("Click a road for its status · 📍 Pick on map to set your location");
 
-    app.card({ col: "right", id: "guide-card", title: "Where do I go?", order: 20, html: `
+    app.card({ col: "right", student: "left", studentOrder: 30, id: "guide-card", title: "Where do I go?", order: 20, html: `
       <label class="small muted" for="start-select">You are at</label>
       <select id="start-select"><option value="">Choose a place, or pick on the map…</option></select>
       <div class="row gap"><button id="btn-locate" class="btn ghost small"><span aria-hidden="true">◎</span> My location</button><button id="btn-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button></div>
-      <div class="row gap"><button id="btn-guide" class="btn primary"><span aria-hidden="true">🔊</span> Guide me</button></div>
+      <div class="row gap"><button id="btn-guide" class="btn primary"><span aria-hidden="true">🔊</span> Find my route</button></div>
       <div id="guide-out" class="guide-out" hidden>
         <div class="dest" id="g-dest" aria-live="polite"></div><blockquote id="g-script"></blockquote>
         <div class="row gap small"><button id="btn-replay" class="btn ghost small"><span aria-hidden="true">↻</span> Play again</button><span id="g-voice" class="muted"></span></div>
         <div class="badge-row" id="g-by"></div><ol class="steps" id="g-steps"></ol>
-        <div id="g-replan" class="replan" hidden>River changed: route re-planned. <button id="btn-respeak" class="link">Hear it</button></div>
+        <div class="onestep" id="g-onestep" hidden>
+          <div class="row"><span class="mono small muted" id="g-steplbl"></span></div>
+          <div class="steptext" id="g-steptext" aria-live="polite"></div>
+          <div class="row gap"><button id="g-prev" class="btn ghost small">Back</button><button id="g-next" class="btn small">Next direction</button></div>
+        </div>
+        <button id="g-all" class="link small" hidden>Show all steps</button>
+        <div id="g-replan" class="replan" hidden>Route re-planned (river level or route options changed). <button id="btn-respeak" class="link">Hear the new route</button></div>
       </div>` });
-    app.card({ col: "right", id: "contacts-card", title: "Emergency contacts", order: 70, html: `
+    app.card({ col: "right", student: "left", studentOrder: 6, id: "contacts-card", title: "Contact emergency", order: 70, html: `
       <ul class="contacts">
         <li><b>Emergency</b><a href="tel:911">911</a></li>
-        <li><b>Rutgers Police (NB alt. line)</b><a href="tel:7329327111">(732) 932-7111</a></li>
-        <li><b>RU Alert sign-up</b><a href="https://emergency.rutgers.edu/ru-alert/" target="_blank" rel="noopener">emergency.rutgers.edu</a></li>
-        <li><b>NJ Office of Emergency Mgmt</b><a href="https://ready.nj.gov/" target="_blank" rel="noopener">ready.nj.gov</a></li>
-        <li><b>NJ road closures</b><a href="https://www.511nj.org/" target="_blank" rel="noopener">511nj.org</a></li>
-        <li><b>NJ Flood Mapper</b><a href="https://njfloodmapper.org/" target="_blank" rel="noopener">njfloodmapper.org</a></li>
+        <li><b>Rutgers Police (New Brunswick)</b><a href="tel:7329327111">(732) 932-7111</a></li>
+        <li data-views="admin"><b>NJ Office of Emergency Mgmt</b><a href="https://ready.nj.gov/" target="_blank" rel="noopener">ready.nj.gov</a></li>
+        <li data-views="admin"><b>NJ road closures</b><a href="https://www.511nj.org/" target="_blank" rel="noopener">511nj.org</a></li>
       </ul>` });
     $("impact-stats")?.insertAdjacentHTML("beforeend", `<div><b id="s-gather" class="mono">--</b><span>gathering pts dry</span></div>`);
 
@@ -78,6 +93,9 @@ const feature: Feature = {
     $("btn-pick").onclick = () => app.pick("Click the map where you are", (pt: Pt) => setStart({ name: "Pinned location", ...pt }));
     $("btn-replay").onclick = () => void speak(lastScript);
     $("btn-respeak").onclick = () => void run();
+    $("g-prev").onclick = () => showStep(stepIdx - 1);
+    $("g-next").onclick = () => showStep(stepIdx + 1, true);
+    $("g-all").onclick = () => { showAll = !showAll; renderSteps(); };
     $("btn-locate").onclick = () => navigator.geolocation?.getCurrentPosition(
       (p) => setStart({ name: "Your location", lon: p.coords.longitude, lat: p.coords.latitude }),
       () => app.hint("Location unavailable: pick on the map instead"));
@@ -96,11 +114,33 @@ const feature: Feature = {
       plan = p;
       (app.map.getSource("route") as GeoJSONSource).setData(p ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: p.coords } } : { type: "FeatureCollection", features: [] });
       $("g-steps").innerHTML = p ? p.steps.map((s) => `<li>${s.say}</li>`).join("") : "";
+      stepIdx = 0;
+      renderSteps();
       $("g-dest").innerHTML = p
         ? `→ ${p.dest.name}<small>${(p.meters / 1000).toFixed(2)} km · ~${Math.round(p.minutes)} min walk · ${p.dest.campus ?? ""}${p.dest.capacity ? ` · ~${p.dest.capacity.toLocaleString()} people (est.)` : ""} · gathering point, not an official shelter</small>`
         : "No dry gathering point reachable on foot";
     }
     showPlanRef = showPlan;
+
+    /** Student option: one instruction at a time instead of the full list. */
+    function renderSteps() {
+      // Student view: one direction at a time by default (Back / Next); the full list is one click away.
+      const student = app.state.view === "student", one = student && !showAll && !!plan;
+      stepsMode = `${showAll}|${app.state.view}`;
+      $("g-steps").hidden = one;
+      $("g-onestep").hidden = !one;
+      $("g-all").hidden = !student || !plan;
+      $("g-all").textContent = showAll ? "Show one step at a time" : "Show all steps";
+      if (one) showStep(stepIdx);
+    }
+    function showStep(i: number, speakIt = false) {
+      if (!plan) return;
+      stepIdx = Math.max(0, Math.min(plan.steps.length - 1, i));
+      $("g-steplbl").textContent = `STEP ${stepIdx + 1} OF ${plan.steps.length}`;
+      $("g-steptext").textContent = plan.steps[stepIdx].say;
+      if (speakIt && app.state.access.readAloud) void speak(plan.steps[stepIdx].say);
+    }
+    renderStepsRef = renderSteps;
 
     async function run(silent = false): Promise<{ script: string; plan: Plan | null }> {
       if (!start) { app.hint("First: pick where you are"); return { script: "", plan: null }; }
@@ -108,7 +148,7 @@ const feature: Feature = {
       btn.disabled = true; btn.textContent = "Planning…";
       $("guide-out").hidden = false; $("g-replan").hidden = true;
       const rise = app.rise(), s = start, obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
-      const p = app.get("grid").depthAt(s.lon, s.lat, rise) >= 3 ? null : app.get("router").plan(s.lon, s.lat, rise, places, obs.closed);
+      const p = app.get("grid").depthAt(s.lon, s.lat, rise) >= 3 ? null : app.get("router").plan(s.lon, s.lat, rise, places, obs.closed, app.state.access.noStairs);
       showPlan(p);
       if (p) {
         const b = new maplibregl.LngLatBounds();
@@ -132,7 +172,7 @@ const feature: Feature = {
         `<span class="badge">${scenario}</span>`,
       ].join("");
       lastScript = res.script;
-      btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Guide me`;
+      btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Find my route`;
       if (!silent) void speak(res.script);
       return { script: res.script, plan: p };
     }
@@ -155,10 +195,11 @@ const feature: Feature = {
     $("s-gather").textContent = `${gathers.filter((p) => p.block > rise + DRY_MARGIN_DM).length}/${gathers.length}`;
     if (plan && start) {
       const obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
-      const next = app.get("router").plan(start.lon, start.lat, rise, places, obs.closed);
+      const next = app.get("router").plan(start.lon, start.lat, rise, places, obs.closed, app.state.access.noStairs);
       const changed = !next || next.dest.name !== plan.dest.name || Math.abs(next.meters - plan.meters) > 25;
       if (changed) { showPlanRef(next); $("g-replan").hidden = false; }
     }
+    if (stepsMode !== `${showAll}|${app.state.view}`) renderStepsRef();
   },
   click(app, pt, ev) {
     const f = app.map.queryRenderedFeatures(ev.point, { layers: ["places"] })[0];
@@ -178,4 +219,5 @@ const feature: Feature = {
   },
 };
 let showPlanRef: (p: Plan | null) => void = () => {};
+let renderStepsRef: () => void = () => {};
 export default feature;

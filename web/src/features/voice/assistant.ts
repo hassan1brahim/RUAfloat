@@ -59,7 +59,7 @@ export class VoiceAssistant {
       this.rec.interimResults = false;
       this.rec.onresult = (e) => { const t = e.results[0]?.[0]?.transcript?.trim(); if (t) void this.handle(t); };
       this.rec.onend = () => { if (this.active && !this.busy) setTimeout(() => this.listen(), 250); };
-      this.rec.onerror = (e) => { if (e.error === "not-allowed") { this.rec = null; void this.say("I can't use the microphone. Press space to hear a briefing, G to be guided, R to repeat, or Escape to stop."); } };
+      this.rec.onerror = (e) => { if (e.error === "not-allowed") { this.rec = null; void this.say("I can't use the microphone. Press space to hear a briefing, G to be guided, R to repeat, Escape to stop talking, or V to turn voice mode off."); } };
     }
     const brief = await this.explain("Give me a short safety briefing right now.", "Voice assistant is on.");
     await this.say(`Voice assistant on. ${brief} ${this.rec ? "Ask me anything, or say help." : "Voice input isn't available in this browser: press space for a briefing, G to be guided, R to repeat."}`);

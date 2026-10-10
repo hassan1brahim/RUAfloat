@@ -24,6 +24,9 @@ export function createMap(): Promise<MLMap> {
         "fill-extrusion-opacity": 0.85,
       },
     });
+    // Start the credits collapsed to the ⓘ button (MapLibre otherwise opens them until the first drag).
+    // They must stay reachable: OpenStreetMap and OpenMapTiles require attribution.
+    map.getContainer().querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
     resolve(map);
   }));
 }
