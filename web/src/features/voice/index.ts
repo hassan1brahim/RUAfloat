@@ -42,7 +42,7 @@ const feature: Feature = {
     app.heroStatus(btn);
     btn.insertAdjacentHTML("afterend", `<span id="voice-help" class="sr-only">Hands-free mode for blind and low-vision users. Press V to start or stop. Then just talk. Keys: space for a briefing, G for your route, N for the next direction, R to repeat, Escape to stop talking.</span>`);
     $("skip-voice").onclick = (e) => { e.preventDefault(); btn.focus(); };
-    app.card({ student: "right", studentOrder: 1, id: "voice-card", title: "Voice assistant", order: 10, hidden: true, extraTitle: ` <span class="src muted">V to stop</span>`, html: `
+    app.card({ student: "left", studentOrder: 4, id: "voice-card", title: "Voice assistant", order: 10, hidden: true, extraTitle: ` <span class="src muted">V to stop</span>`, html: `
       <div id="voice-state" class="small muted"></div>
       <ul id="voice-log" class="voice-log"></ul>
       <div class="small muted">Say “help” for what you can ask. Keys: Space briefing · G route · N next direction · R repeat · Esc stop talking · V turn off.</div>` });

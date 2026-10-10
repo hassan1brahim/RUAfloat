@@ -12,15 +12,4 @@
 #map-layers input[type="checkbox"] { width: 18px; height: 18px; }
 
 
-/* One-tap "Get me to safety": the first control on the page. */
-.safety-btn { width: 100%; justify-content: center; background: var(--scarlet); border-color: var(--scarlet); color: #fff; font-size: 15px; font-weight: 700; min-height: 44px; padding: 10px 16px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
-#now-card h2 { order: 1; margin: 12px 0 6px; }
-#now-card { display: flex; flex-direction: column; }
-#now-slot { order: 2; }
-#now-slot .top-right { justify-self: stretch; align-items: flex-start; text-align: left; }
-.safety-btn:hover { filter: brightness(1.1); }
-.safety-btn:disabled { opacity: .8; cursor: progress; }
 
-#now-slot .top-river { flex-wrap: wrap; gap: 4px 10px; }
-#now-slot .top-river > * { white-space: nowrap; }
-#now-slot #top-stage { font-size: 16px; }

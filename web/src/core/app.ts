@@ -40,8 +40,6 @@ export class App {
   readonly state = {
     mode: "live" as Mode, stageFt: BASE_FT,
     view: (this.params.get("view") === "admin" ? "admin" : "student") as View,
-    /** Student accessibility options (set by the student feature, read by the guide). */
-    access: { noStairs: false, readAloud: true },
   };
   private svc: Partial<Services> = {};
   private picking: ((pt: Pt) => void) | null = null;
@@ -111,6 +109,9 @@ export class App {
       b.setAttribute("aria-pressed", String(b.dataset.view === v));
     });
     document.querySelectorAll<HTMLElement>(".col > .card").forEach((el) => this.place(el));
+    // What-if and replays are Admin tools: switching to Student view goes back to the live river
+    // (which also stops any replay or simulation). Demo links like ?scenario=ida apply after start, so they still work.
+    if (v === "student" && this.state.mode !== "live") this.maybe("river")?.setMode("live");
     this.map?.resize();
     this.update();
   }
