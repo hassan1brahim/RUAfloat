@@ -3,6 +3,7 @@ import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import type { App, Feature, Pt } from "../../core/app";
 import { $, esc, fmtFt, getJson, postJson } from "../../core/util";
 import { announce } from "../../lib/speech";
+import { bestPosition, circle, type Fix } from "../../lib/locate";
 import { DRY_MARGIN_DM, type Place, type Plan } from "../../lib/route";
 import { onSpeak, speak, stopSpeaking } from "../../lib/speech";
 import { NO_OBSERVATIONS } from "../roads";
@@ -13,7 +14,7 @@ const DEMO_START = "Scott Hall";
 /** Destinations further than this are not offered, unless nothing dry is closer. */
 const MAX_WALK_MIN = 20;
 
-export type Start = { name: string; lon: number; lat: number };
+export type Start = { name: string; lon: number; lat: number; accuracy?: number };
 export type Guide = {
   places: Place[]; starts: Start[];
   start: () => Start | null; setStart: (s: Start) => void;
@@ -45,6 +46,9 @@ const feature: Feature = {
     [places, starts] = await Promise.all([getJson<Place[]>("/data/places.json"), getJson<Start[]>("/data/starts.json")]);
     starts = [...starts, ...places.filter((p) => p.kind === "gather")].sort((a, b) => a.name.localeCompare(b.name));
     const m = app.map;
+    m.addSource("you-acc", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    m.addLayer({ id: "you-acc", type: "fill", source: "you-acc", paint: { "fill-color": "#cc0033", "fill-opacity": 0.12 } });
+    m.addLayer({ id: "you-acc-line", type: "line", source: "you-acc", paint: { "line-color": "#cc0033", "line-width": 1.5, "line-opacity": 0.6 } });
     m.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     m.addLayer({ id: "route-glow", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#22d3ee", "line-width": 12, "line-opacity": 0.25, "line-blur": 4 } });
     m.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#67e8f9", "line-width": 4 } });
@@ -166,15 +170,11 @@ const feature: Feature = {
     $("btn-gps").onclick = () => {
       if (!navigator.geolocation) return askForPlace("This browser can't share its location. Choose where you are:");
       app.hint("Finding your location…");
-      navigator.geolocation.getCurrentPosition(
-        (p) => {
-          if (app.get("grid").cellAt(p.coords.longitude, p.coords.latitude) < 0) return askForPlace("You're outside the area this app covers. Choose where you are on campus:");
-          setStart({ name: "Your location", lon: p.coords.longitude, lat: p.coords.latitude });
-          // Laptops have no GPS and guess from Wi-Fi: say how far off it may be, so a wrong guess is obvious.
-          app.hint(`From: Your location (accurate to about ${Math.round(p.coords.accuracy)} m) · wrong? Pick on map`);
-        },
-        () => askForPlace("Couldn't get your location. Choose where you are:"),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+      void bestPosition({ onProgress: (f) => app.hint(`Finding your location… within ${Math.round(f.accuracy)} m`) }).then((f) => {
+        if (!f) return askForPlace("Couldn't get your location. Choose where you are:");
+        if (app.get("grid").cellAt(f.lon, f.lat) < 0) return askForPlace("You're outside the area this app covers. Choose where you are on campus:");
+        setFromFix(f);
+      });
     };
 
     /**
@@ -185,13 +185,10 @@ const feature: Feature = {
       const btn = $<HTMLButtonElement>("btn-guide");
       btn.disabled = true; btn.textContent = "Finding your location…";
       announce("Finding your location.");
-      const pos = await new Promise<GeolocationPosition | null>((res) => {
-        if (!navigator.geolocation) return res(null);
-        navigator.geolocation.getCurrentPosition(res, () => res(null), { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
-      });
+      const pos = await bestPosition({ onProgress: (f) => (btn.textContent = `Finding your location… within ${Math.round(f.accuracy)} m`) });
       btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Route from this place`;
-      if (pos && app.get("grid").cellAt(pos.coords.longitude, pos.coords.latitude) >= 0) {
-        setStart({ name: "Your location", lon: pos.coords.longitude, lat: pos.coords.latitude });
+      if (pos && app.get("grid").cellAt(pos.lon, pos.lat) >= 0) {
+        setFromFix(pos);
       } else if (app.state.mode !== "live") {
         const demo = starts.find((s) => s.name === DEMO_START);
         if (!demo) return;
@@ -241,7 +238,25 @@ const feature: Feature = {
       marker?.remove();
       const el = document.createElement("div");
       el.style.cssText = "width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid #cc0033;box-shadow:0 0 0 6px rgba(204,0,51,.25)";
-      marker = new maplibregl.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(app.map);
+      // Draggable: a laptop's Wi-Fi guess can be hundreds of metres off, so the student can put the pin where they are.
+      marker = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([s.lon, s.lat]).addTo(app.map);
+      marker.on("dragend", () => {
+        const at = marker!.getLngLat(), hadRoute = !!plan;
+        setStart({ name: "Pinned location", lon: at.lng, lat: at.lat });
+        if (hadRoute) void run();
+      });
+      (app.map.getSource("you-acc") as GeoJSONSource).setData(s.accuracy && s.accuracy > 15
+        ? { type: "FeatureCollection", features: [circle(s.lon, s.lat, s.accuracy)] } : { type: "FeatureCollection", features: [] });
+      const rough = (s.accuracy ?? 0) > 100;
+      $("start-msg").textContent = rough ? `Your device only knows this within about ${Math.round(s.accuracy!)} m (laptops guess from Wi-Fi). Drag the red pin to where you are.` : "";
+      $("start-msg").hidden = !rough;
+    }
+
+    /** A located start: show it, centred, with how sure the device is. */
+    function setFromFix(f: Fix) {
+      setStart({ name: "Your location", lon: f.lon, lat: f.lat, accuracy: f.accuracy });
+      app.map.flyTo({ center: [f.lon, f.lat], zoom: Math.max(app.map.getZoom(), f.accuracy > 200 ? 15 : 16.5), duration: 800 });
+      app.hint(`From: Your location (within about ${Math.round(f.accuracy)} m) · wrong? Drag the pin`);
     }
 
     function showPlan(p: Plan | null) {

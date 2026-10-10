@@ -4,6 +4,7 @@ import type { Feature, Pt } from "../../core/app";
 import { $, esc, et, getJson, postJson } from "../../core/util";
 import { observe, shrinkPhoto, type Camera, type CameraCheck, type Report, type ReportStatus, type Sensor } from "./observe";
 import "./style.css";
+import { bestPosition } from "../../lib/locate";
 
 let reports: Report[] = [], sensors: Sensor[] = [], cameras: Camera[] = [];
 let statuses = new Map<string, ReportStatus>();
@@ -54,7 +55,12 @@ const feature: Feature = {
     };
     photo.onchange = ready;
     $("r-pick").onclick = () => app.pick("Click the map where the flooding is", (pt) => setLoc("Pinned on map", pt));
-    $("r-gps").onclick = () => navigator.geolocation?.getCurrentPosition((p) => setLoc("GPS", { lon: p.coords.longitude, lat: p.coords.latitude }));
+    $("r-gps").onclick = async () => {
+      $("r-loc").textContent = "Finding your location…";
+      const f = await bestPosition();
+      if (f) setLoc(`GPS, within ${Math.round(f.accuracy)} m`, { lon: f.lon, lat: f.lat });
+      else $("r-loc").textContent = "Couldn't get your location: use Pick on map.";
+    };
     send.onclick = async () => {
       send.disabled = true; send.textContent = "Checking photo…";
       try {

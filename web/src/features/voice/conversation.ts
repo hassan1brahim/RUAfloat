@@ -142,7 +142,7 @@ export class AgentConversation {
             res(json({ ok: true, location: "their GPS position", accuracy_m: Math.round(p.coords.accuracy) }));
           },
           () => res(json({ ok: false, note: "Location permission was denied or unavailable. Ask which building they are in." })),
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
       }),
       plan_route: async () => {
         if (!c.hasStart()) return json({ ok: false, note: "Location not set yet. Ask where they are first." });
