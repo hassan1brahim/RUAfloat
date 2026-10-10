@@ -1,4 +1,4 @@
-/** "Where do I go?": start point, nearest dry gathering point, walking route, spoken script (AI + guard), contacts. */
+/** "Get me to safety": start point, nearest dry gathering point, walking route, spoken script (AI + guard), contacts. */
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import type { App, Feature, Pt } from "../../core/app";
 import { $, esc, fmtFt, getJson, postJson } from "../../core/util";
@@ -8,11 +8,16 @@ import { onSpeak, speak } from "../../lib/speech";
 import { NO_OBSERVATIONS } from "../roads";
 import "./style.css";
 
+/** Replays use this start when the user is off campus, so the demo works from anywhere. */
+const DEMO_START = "Scott Hall";
+
 export type Start = { name: string; lon: number; lat: number };
 export type Guide = {
   places: Place[]; starts: Start[];
   start: () => Start | null; setStart: (s: Start) => void;
   plan: () => Plan | null; run: (silent?: boolean) => Promise<{ script: string; plan: Plan | null }>;
+  /** Location didn't work: highlight the place chooser with a message and move focus to it. */
+  askForPlace: (message: string) => void;
 };
 declare module "../../core/app" { interface Services { guide: Guide } }
 
@@ -63,15 +68,20 @@ const feature: Feature = {
     app.legend(`<div><i class="dot" style="background:#fb923c"></i>Fire station</div>`, { key: "fire" });
     app.setDefaultHint("Click a road for its status · 📍 Pick on map to set your location");
 
-    app.card({ student: "left", studentOrder: 30, id: "guide-card", title: "Where do I go?", order: 20, html: `
-      <label class="small muted" for="start-select">You are at</label>
+    // One box: where you are (or your location), then Route from this place.
+    app.card({ student: "left", studentOrder: 1, id: "guide-card", title: "Get me to safety", order: 20, html: `
+      <div id="start-box" class="start-box">
+      <div id="start-msg" class="start-msg" role="status" hidden></div>
+      <label class="start-label" for="start-select">You are currently at:</label>
       <select id="start-select"><option value="">Choose a place, or pick on the map…</option></select>
       <label class="small muted" for="place-q" style="display:block;margin-top:8px">Or search any building</label>
       <div class="row"><input id="place-q" type="search" placeholder="e.g. LSM, Hill Center, Scott Hall" autocomplete="off" /></div>
       <div id="place-n" class="sr-only" role="status"></div>
       <ul id="place-results" class="place-results" aria-label="Search results"></ul>
-      <div class="row gap"><button id="btn-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button></div>
+      <div class="row gap"><button id="btn-gps" class="btn ghost small"><span aria-hidden="true">◎</span> Use my GPS</button><button id="btn-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button></div>
       <div class="row gap"><button id="btn-guide" class="btn primary"><span aria-hidden="true">🔊</span> Route from this place</button></div>
+      <p class="safety-note">If location is on and no place is chosen, it will route you immediately to the nearest safe spot.</p>
+      </div>
       <div id="guide-out" class="guide-out" hidden>
         <div class="dest" id="g-dest" tabindex="-1"></div><blockquote id="g-script"></blockquote>
         <div class="row gap small"><button id="btn-replay" class="btn ghost small"><span aria-hidden="true">↻</span> Play again</button><span id="g-voice" class="muted"></span></div>
@@ -98,12 +108,12 @@ const feature: Feature = {
     const sel = $<HTMLSelectElement>("start-select");
     for (const s of starts) sel.add(new Option(s.name, JSON.stringify(s)));
     sel.onchange = () => sel.value && setStart(JSON.parse(sel.value));
-    $("btn-guide").onclick = () => void run();
+    $("btn-guide").onclick = () => void (start ? run() : locateAndRun());
     $("btn-pick").onclick = () => app.pick("Click the map where you are", (pt: Pt) => setStart({ name: "Pinned location", ...pt }));
     $("btn-replay").onclick = () => void speak(lastScript);
     $("btn-respeak").onclick = () => void run();
     $("g-prev").onclick = () => showStep(stepIdx - 1);
-    $("g-next").onclick = () => showStep(stepIdx + 1, true);
+    $("g-next").onclick = () => showStep(stepIdx + 1);
     $("g-all").onclick = () => { showAll = !showAll; renderSteps(); };
 
     // Search: the same 324-building index the voice agent uses. Results are plain buttons a screen reader can read.
@@ -139,7 +149,61 @@ const feature: Feature = {
       void run();
     };
 
+    // Sets where you are from GPS without routing yet (Route me to safety above does both in one tap).
+    $("btn-gps").onclick = () => {
+      if (!navigator.geolocation) return askForPlace("This browser can't share its location. Choose where you are:");
+      app.hint("Finding your location…");
+      navigator.geolocation.getCurrentPosition(
+        (p) => {
+          if (app.get("grid").cellAt(p.coords.longitude, p.coords.latitude) < 0) return askForPlace("You're outside the area HackRU-26 covers. Choose where you are on campus:");
+          setStart({ name: "Your location", lon: p.coords.longitude, lat: p.coords.latitude });
+          // Laptops have no GPS and guess from Wi-Fi: say how far off it may be, so a wrong guess is obvious.
+          app.hint(`From: Your location (accurate to about ${Math.round(p.coords.accuracy)} m) · wrong? Pick on map`);
+        },
+        () => askForPlace("Couldn't get your location. Choose where you are:"),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+    };
+
+    /**
+     * No place chosen: use the phone's location, plan the walk and read it aloud, in one press.
+     * Replays (Ida, what-if) start from Scott Hall when the user is off campus, so the demo works from anywhere.
+     */
+    async function locateAndRun() {
+      const btn = $<HTMLButtonElement>("btn-guide");
+      btn.disabled = true; btn.textContent = "Finding your location…";
+      announce("Finding your location.");
+      const pos = await new Promise<GeolocationPosition | null>((res) => {
+        if (!navigator.geolocation) return res(null);
+        navigator.geolocation.getCurrentPosition(res, () => res(null), { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+      });
+      btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Route from this place`;
+      if (pos && app.get("grid").cellAt(pos.coords.longitude, pos.coords.latitude) >= 0) {
+        setStart({ name: "Your location", lon: pos.coords.longitude, lat: pos.coords.latitude });
+      } else if (app.state.mode !== "live") {
+        const demo = starts.find((s) => s.name === DEMO_START);
+        if (!demo) return;
+        setStart(demo);
+        await speak(`${pos ? "You are not on campus" : "I could not get your location"}, so for this replay I will start from ${DEMO_START}.`);
+      } else {
+        void speak(pos
+          ? "You are outside the area HackRU-26 covers, which is Rutgers New Brunswick. Choose a place on campus. If you are in danger, call 9 1 1."
+          : "I could not get your location. Choose the building you are in, then press Route from this place. If you are in danger, call 9 1 1.");
+        return askForPlace(pos ? "You're outside the area HackRU-26 covers. Choose where you are on campus:" : "Couldn't get your location. Choose where you are:");
+      }
+      await run();
+    }
+
+    function askForPlace(message: string) {
+      $("start-msg").textContent = message;
+      $("start-msg").hidden = false;
+      $("start-box").classList.add("need");
+      $("start-box").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      sel.focus({ preventScroll: true });
+    }
+
     function setStart(s: Start) {
+      $("start-msg").hidden = true;
+      $("start-box").classList.remove("need");
       chosen = null;   // a new start: back to the nearest dry point
       // A new starting point makes the old route wrong: clear it so nothing (screen, voice agent, Map in words) reads it.
       if (start && plan && (start.lon !== s.lon || start.lat !== s.lat)) {
@@ -173,7 +237,9 @@ const feature: Feature = {
       $("g-steps").innerHTML = p ? p.steps.map((s) => `<li>${s.say}</li>`).join("") : "";
       stepIdx = 0;
       renderSteps();
-      $("g-dest").innerHTML = p
+      $("g-dest").innerHTML = p?.here
+        ? `You're at a help meetup spot: ${esc(p.dest.name)}<small>It stays dry at this river level · gathering point, not an official shelter</small>`
+        : p
         ? `→ ${p.dest.name}<small>${(p.meters / 1000).toFixed(2)} km · ~${Math.round(p.minutes)} min walk · ${p.dest.campus ?? ""}${p.dest.capacity ? ` · ~${p.dest.capacity.toLocaleString()} people (est.)` : ""} · gathering point, not an official shelter</small>`
         : "No dry gathering point reachable on foot";
     }
@@ -190,12 +256,11 @@ const feature: Feature = {
       $("g-all").textContent = showAll ? "Show one step at a time" : "Show all steps";
       if (one) showStep(stepIdx);
     }
-    function showStep(i: number, speakIt = false) {
+    function showStep(i: number) {
       if (!plan) return;
       stepIdx = Math.max(0, Math.min(plan.steps.length - 1, i));
       $("g-steplbl").textContent = `STEP ${stepIdx + 1} OF ${plan.steps.length}`;
       $("g-steptext").textContent = plan.steps[stepIdx].say;
-      if (speakIt && app.state.access.readAloud) void speak(plan.steps[stepIdx].say);
     }
     renderStepsRef = renderSteps;
 
@@ -205,7 +270,7 @@ const feature: Feature = {
       btn.disabled = true; btn.textContent = "Planning…";
       $("guide-out").hidden = false; $("g-replan").hidden = true;
       const rise = app.rise(), s = start, obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
-      const p = app.get("grid").depthAt(s.lon, s.lat, rise) >= 3 ? null : app.get("router").plan(s.lon, s.lat, rise, targets(rise), obs.closed, app.state.access.noStairs);
+      const p = app.get("grid").depthAt(s.lon, s.lat, rise) >= 3 ? null : app.get("router").plan(s.lon, s.lat, rise, targets(rise), obs.closed);
       showPlan(p);
       if (p) renderDestinations(app);
       // Screen-reader users land on the result instead of staying on the button with no idea where it appeared.
@@ -220,7 +285,9 @@ const feature: Feature = {
         ? { start: s.name, dest: p.dest.name, meters: p.meters, minutes: p.minutes, steps: p.steps, avoid: p.avoid, scenario }
         : { start: s.name === "Pinned location" ? "your location" : s.name, shelter_in_place: true, steps: [], avoid: [], scenario };
       let res: Res;
-      try { res = await postJson<Res>("/api/guide", payload); }
+      // Already at a dry meetup spot: fixed advice to stay, no route for the AI to describe.
+      if (p?.here) res = { script: `You're at ${p.dest.name}, a help meetup spot that stays dry at this river level. Stay here and follow RU Alert. If you are in danger, call 9 1 1.`, by: "fixed", check: [] };
+      else try { res = await postJson<Res>("/api/guide", payload); }
       catch { res = { script: p ? `Walk to ${p.dest.name}, about ${Math.round(p.minutes)} minutes. If you are in danger, call 9 1 1.` : "Move to the highest floor you can reach and call 9 1 1.", by: "offline", check: ["API offline"] }; }
       const q = $("g-script");
       q.textContent = res.script;
@@ -240,13 +307,13 @@ const feature: Feature = {
     // phones: the guide card scrolls away under the map, so keep a thumb-reach shortcut to it
     const fab = document.createElement("button");
     fab.className = "btn primary go-fab";
-    fab.innerHTML = `<span aria-hidden="true">🧭</span> Where do I go?`;
-    fab.onclick = () => { $("guide-card").scrollIntoView({ behavior: "smooth", block: "start" }); sel.focus({ preventScroll: true }); };
+    fab.innerHTML = `<span aria-hidden="true">🆘</span> Route me to safety`;
+    fab.onclick = () => { $("guide-card").scrollIntoView({ behavior: "smooth", block: "start" }); $("btn-guide").click(); };
     document.body.append(fab);
     new IntersectionObserver(([e]) => (fab.hidden = e.isIntersecting), { threshold: 0.2 }).observe($("guide-card"));
 
     onSpeak((_, voice) => { const el = document.getElementById("g-voice"); if (el) el.textContent = `Voice: ${voice}`; });
-    app.provide("guide", { places, starts, start: () => start, setStart, plan: () => plan, run });
+    app.provide("guide", { places, starts, start: () => start, setStart, plan: () => plan, run, askForPlace });
   },
   update(app) {
     const rise = app.rise();
@@ -255,7 +322,7 @@ const feature: Feature = {
     $("s-gather").textContent = `${gathers.filter((p) => p.block > rise + DRY_MARGIN_DM).length}/${gathers.length}`;
     if (plan && start) {
       const obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
-      const next = app.get("router").plan(start.lon, start.lat, rise, targets(rise), obs.closed, app.state.access.noStairs);
+      const next = app.get("router").plan(start.lon, start.lat, rise, targets(rise), obs.closed);
       const changed = !next || next.dest.name !== plan.dest.name || Math.abs(next.meters - plan.meters) > 25;
       if (changed) { showPlanRef(next); $("g-replan").hidden = false; }
     }
@@ -290,7 +357,7 @@ function targets(rise: number): Place[] {
 /** One button per dry gathering point; its text is everything a screen reader user needs to choose. */
 function renderDestinations(app: App) {
   const obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
-  const all = app.get("router").reachable(start!.lon, start!.lat, app.rise(), places, obs.closed, app.state.access.noStairs);
+  const all = app.get("router").reachable(start!.lon, start!.lat, app.rise(), places, obs.closed);
   const html = all.slice(0, 6).map(({ place: p, meters, minutes }, i) => {
     const on = plan?.dest.name === p.name;
     return `<li><button class="dest-btn${on ? " on" : ""}" data-dest="${i === 0 ? "" : esc(p.name)}" aria-pressed="${on}">
