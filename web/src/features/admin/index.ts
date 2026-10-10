@@ -139,7 +139,8 @@ const feature: Feature = {
   init(app) {
     app.card({ col: "right", id: "adm-bldg-card", title: "Highest-risk buildings", order: 5, html: `<div class="small" id="adm-bldg-sum"></div><ul class="alist" id="adm-bldg"><li class="muted">Loading…</li></ul>` });
     app.card({ col: "right", id: "adm-roads-card", title: "Roads: closed and closing", order: 15, html: `<div class="small" id="adm-roads-sum"></div><ul class="alist" id="adm-roads"></ul>` });
-    app.card({ col: "right", id: "adm-review-card", title: "Needs a decision", order: 25, extraTitle: ` <span class="count" id="adm-review-n"></span>`, html: `<ul class="alist review" id="adm-review"></ul>` });
+    app.card({ col: "right", id: "adm-review-card", title: "Needs a decision", order: 25, extraTitle: ` <span class="count" id="adm-review-n"></span>`,
+      html: `<ul class="alist review" id="adm-review"></ul><div class="small warn" id="adm-review-err"></div>` });
     app.card({ col: "right", id: "adm-disp-card", title: "Dispatch", order: 20, extraTitle: ` <span class="count" id="adm-disp-n"></span>`,
       html: `<div id="adm-disp-form" class="disp-form" hidden></div><ul class="alist disp" id="adm-disp"></ul><div class="muted small">Unit screen: <a href="/unit.html" target="_blank">/unit.html</a></div>` });
     app.card({ col: "left", id: "adm-feed-card", title: "What changed", order: 5, html: `<ul class="feed" id="adm-feed"></ul>` });
@@ -166,8 +167,12 @@ const feature: Feature = {
       if (t.dataset.show != null) return fly(item.lon, item.lat);
       const verdict = t.dataset.verdict;
       if (!verdict) return;
+      const err = $("adm-review-err");
+      if (!token()) { err.textContent = "Enter the admin token below first."; return; }
       const r = await adminPost(`/api/reports/${item.id}/review`, { verdict });
-      if (r.status === 401) { dropToken(); return render(); }
+      if (r.status === 401) { dropToken(); render(); $("adm-review-err").textContent = "Wrong admin token — re-enter it below."; return; }
+      if (!r.ok) { err.textContent = (await r.json().catch(() => null))?.error || `Request failed (${r.status}).`; return; }
+      err.textContent = "";
       await load(app);
       app.refresh();   // routing and the map pick up the decision
     });
