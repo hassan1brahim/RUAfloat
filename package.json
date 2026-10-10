@@ -15,13 +15,15 @@
     "tts:time": "node scripts/time_tts.mjs",
     "demo:links": "node scripts/demo_links.mjs",
     "demo:clean": "node scripts/clean_test_data.mjs",
-    "a11y:contrast": "node scripts/a11y_contrast.mjs"
+    "a11y:contrast": "node scripts/a11y_contrast.mjs",
+    "agent:setup": "sh -c 'set -a; . ./.env; set +a; node scripts/setup-agent.mjs'"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
-    "maplibre-gl": "^5.24.0"
+    "maplibre-gl": "^5.24.0",
+    "@elevenlabs/client": "^1.27.0"
   },
   "devDependencies": {
     "concurrently": "^9.2.5",
