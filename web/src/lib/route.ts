@@ -5,6 +5,8 @@ export type Step = { road: string; meters: number; say: string; at: [number, num
 export type Plan = {
   dest: Place; meters: number; minutes: number; steps: Step[];
   coords: [number, number][]; avoid: string[]; edges: number[];
+  /** The start is already at a dry meetup spot: stay there, no walk. */
+  here?: boolean;
 };
 /** Road segments closed by observations (sensor or confirmed report), on top of the model's closures. */
 export type Closed = Set<number>;
@@ -13,6 +15,9 @@ type Roads = { nodes: number[]; edges: number[][]; names: string[]; geom: number
 const WALK_MPS = 1.3;
 const GENERIC = new Set(["footpath", "path", "service road", "bike path", "steps", "unnamed road", "walkway", "access road"]);
 export const DRY_MARGIN_DM = 9; // a gathering point must stay dry ~3 ft above the current rise
+// A building is reached from whichever nearby path point gives the shortest walk, not only the single nearest one
+// (the nearest can be a walkway behind the building that loops the long way round). Off-path metres cost a bit more.
+const START_SNAP_M = 50, DEST_SNAP_M = 70, OFF_PATH = 2, HERE_M = 80;
 
 export class Router {
   private adj: Int32Array;
@@ -125,20 +130,26 @@ export class Router {
     return { km: total / 1000, named: [...byName.entries()].sort((a, b) => b[1] - a[1]) };
   }
 
-  /** Edges mapped as stairs (OSM highway=steps), for step-free routing. */
-  private stairs: Set<number> | null = null;
-  stairEdges(): Set<number> {
-    if (!this.stairs) { this.stairs = new Set(); this.r.edges.forEach((e, i) => { if (this.name(e) === "steps") this.stairs!.add(i); }); }
-    return this.stairs;
+  /** Path nodes within `radiusM` of a point with their straight-line distance; at least the nearest one. */
+  private nodesNear(lon: number, lat: number, radiusM: number): [number, number][] {
+    const out: [number, number][] = [];
+    for (let i = 0; i < this.nodeCount; i++) {
+      if (this.adjStart[i + 1] === this.adjStart[i]) continue;
+      const d = metersBetween([lon, lat], [this.lon(i), this.lat(i)]);
+      if (d <= radiusM) out.push([i, d]);
+    }
+    if (!out.length) { const n = this.nearest(lon, lat); out.push([n, metersBetween([lon, lat], [this.lon(n), this.lat(n)])]); }
+    return out;
   }
 
-  private dijkstra(src: number, riseDm: number, observed: Closed, noStairs: boolean) {
-    const stairs = noStairs ? this.stairEdges() : null;
+  /** Shortest walking distance from several start nodes at once, each with its own head start (metres). */
+  private dijkstra(seeds: [number, number][], riseDm: number, observed: Closed) {
     const n = this.nodeCount;
     const dist = new Float64Array(n).fill(Infinity);
     const prev = new Int32Array(n).fill(-1);
-    dist[src] = 0;
-    const heap: [number, number][] = [[0, src]];
+    const heap: [number, number][] = [];
+    for (const [node, d] of seeds) if (d < dist[node]) { dist[node] = d; heap.push([d, node]); }
+    heap.sort((a, b) => a[0] - b[0]);   // a sorted array is a valid min-heap
     const push = (x: [number, number]) => {
       heap.push(x);
       let i = heap.length - 1;
@@ -165,7 +176,7 @@ export class Router {
       if (d > dist[u]) continue;
       for (let k = this.adjStart[u]; k < this.adjStart[u + 1]; k++) {
         const ei = this.adj[k], e = this.r.edges[ei];
-        if (e[3] <= riseDm || observed.has(ei) || stairs?.has(ei)) continue;
+        if (e[3] <= riseDm || observed.has(ei)) continue;
         const v = e[0] === u ? e[1] : e[0];
         const nd = d + e[2];
         if (nd < dist[v]) { dist[v] = nd; prev[v] = ei; push([nd, v]); }
@@ -175,34 +186,47 @@ export class Router {
   }
 
   /** Every dry gathering point reachable on foot from a point, nearest walk first (one search for all of them). */
-  reachable(lon: number, lat: number, riseDm: number, places: Place[], observed: Closed = new Set(), noStairs = false): { place: Place; meters: number; minutes: number }[] {
-    const { dist } = this.dijkstra(this.nearest(lon, lat), riseDm, observed, noStairs);
+  reachable(lon: number, lat: number, riseDm: number, places: Place[], observed: Closed = new Set()): { place: Place; meters: number; minutes: number }[] {
+    // same start and end snapping as plan(), so the list and the route agree on distances
+    const seeds = this.nodesNear(lon, lat, START_SNAP_M).map(([node, d]) => [node, d * OFF_PATH] as [number, number]);
+    const { dist } = this.dijkstra(seeds, riseDm, observed);
     return places
       .filter((p) => p.kind === "gather" && p.block > riseDm + DRY_MARGIN_DM)
-      .map((p) => ({ place: p, meters: dist[this.nearest(p.lon, p.lat)] }))
+      .map((p) => ({ place: p, meters: Math.min(...this.nodesNear(p.lon, p.lat, DEST_SNAP_M).map(([node, d]) => dist[node] + d * OFF_PATH)) }))
       .filter((x) => isFinite(x.meters))
       .sort((a, b) => a.meters - b.meters)
       .map((x) => ({ ...x, minutes: x.meters / WALK_MPS / 60 }));
   }
 
-  /** Route from a point to the nearest gathering point that stays dry at this rise; `noStairs` skips mapped staircases. */
-  plan(lon: number, lat: number, riseDm: number, places: Place[], observed: Closed = new Set(), noStairs = false): Plan | null {
-    const src = this.nearest(lon, lat);
-    const { dist, prev } = this.dijkstra(src, riseDm, observed, noStairs);
-    let best: { p: Place; node: number } | null = null;
-    for (const p of places) {
-      if (p.kind !== "gather" || p.block <= riseDm + DRY_MARGIN_DM) continue;
-      const node = this.nearest(p.lon, p.lat);
-      if (!best || dist[node] < dist[best.node]) best = { p, node };
+  /** Route from a point to the nearest gathering point that stays dry at this rise. */
+  plan(lon: number, lat: number, riseDm: number, places: Place[], observed: Closed = new Set()): Plan | null {
+    const dry = places.filter((p) => p.kind === "gather" && p.block > riseDm + DRY_MARGIN_DM);
+    // Already at a dry meetup spot: the advice is to stay, not a 0-minute walk.
+    const at0 = dry.map((p) => ({ p, d: metersBetween([lon, lat], [p.lon, p.lat]) })).sort((a, b) => a.d - b.d)[0];
+    if (at0 && at0.d <= HERE_M) {
+      const p = at0.p;
+      return { dest: p, meters: 0, minutes: 0, here: true, edges: [], coords: [[lon, lat], [p.lon, p.lat]], avoid: this.avoidNear(lon, lat, riseDm, observed),
+        steps: [{ road: p.name, meters: 0, at: [p.lon, p.lat], say: `You're at ${p.name}, a help meetup spot that stays dry at this river level. Stay here.` }] };
     }
-    if (!best || !isFinite(dist[best.node])) return null;
+
+    const seeds = this.nodesNear(lon, lat, START_SNAP_M).map(([node, d]) => [node, d * OFF_PATH] as [number, number]);
+    const { dist, prev } = this.dijkstra(seeds, riseDm, observed);
+    let best: { p: Place; node: number; cost: number } | null = null;
+    for (const p of dry) {
+      for (const [node, d] of this.nodesNear(p.lon, p.lat, DEST_SNAP_M)) {
+        const cost = dist[node] + d * OFF_PATH;
+        if (isFinite(cost) && (!best || cost < best.cost)) best = { p, node, cost };
+      }
+    }
+    if (!best) return null;
 
     const path: number[] = [];
-    for (let v = best.node; v !== src; ) {
-      const ei = prev[v];
+    let src = best.node;
+    while (prev[src] !== -1) {
+      const ei = prev[src];
       path.push(ei);
       const e = this.r.edges[ei];
-      v = e[0] === v ? e[1] : e[0];
+      src = e[0] === src ? e[1] : e[0];
     }
     path.reverse();
 
@@ -215,13 +239,15 @@ export class Router {
       coords.push(...seg);
       const road = spoken(this.name(e));
       const g = groups[groups.length - 1];
-      if (g && g.road === road) { g.meters += e[2]; g.c0.push(...seg); }
+      // an unnamed walkway that turns sharply into another is a new step, so the turn gets spoken
+      const turns = g && (road === "walkway" || road === "access road") && turnDeg(g.c0, seg) > 50;
+      if (g && g.road === road && !turns) { g.meters += e[2]; g.c0.push(...seg); }
       else groups.push({ road, meters: e[2], c0: seg.slice() });
       at = e[0] === at ? e[1] : e[0];
     }
     coords.push([best.p.lon, best.p.lat]);
 
-    const meters = dist[best.node];
+    const meters = best.cost;
     const steps = toSteps(groups);
     steps.push({ road: best.p.name, meters: 0, at: [best.p.lon, best.p.lat], say: `Arrive at ${best.p.name}.` });
     return { dest: best.p, meters, minutes: meters / WALK_MPS / 60, steps, coords, avoid: this.avoidNear(lon, lat, riseDm, observed), edges: path };
@@ -255,6 +281,8 @@ function heading(c: [number, number][], fromEnd = false) {
   const far = pts.find((p) => metersBetween(pts[0], p) >= 40) ?? pts[pts.length - 1];
   return fromEnd ? bearing(far, pts[0]) : bearing(pts[0], far);
 }
+/** How sharply a walk bends from the end of `a` into the start of `b` (degrees, 0-180). */
+const turnDeg = (a: [number, number][], b: [number, number][]) => Math.abs(((heading(b) - heading(a, true) + 540) % 360) - 180);
 const COMPASS = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"];
 const compass = (b: number) => COMPASS[Math.round(((b + 360) % 360) / 45) % 8];
 const roundM = (m: number) => (m < 100 ? Math.max(10, Math.round(m / 10) * 10) : Math.round(m / 50) * 50);
