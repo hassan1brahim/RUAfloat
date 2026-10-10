@@ -11,15 +11,25 @@
 </head>
 <body>
   <header class="top">
-    <div class="brand">
-      <span class="logo" aria-hidden="true">RU</span>
-      <div><h1 class="title">HackRU-26</h1><div class="sub">Raritan flood command · New Brunswick, NJ</div></div>
+    <div class="top-left">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">RU</span>
+        <div><h1 class="title">HackRU-26</h1><div class="sub">Raritan flood command · New Brunswick, NJ</div>
+          <div class="alert-note">Sign up for alerts at <a href="https://emergency.rutgers.edu/ru-alert/" target="_blank" rel="noopener">RU Emergency (RU Alert)</a></div></div>
+      </div>
+      <div id="hero-status"></div>
     </div>
-    <div class="top-status" id="top-status"></div>
+    <div class="top-center">
+      <div class="seg2" id="view-seg" role="group" aria-label="View">
+        <button data-view="student">STUDENT VIEW</button><button data-view="admin">ADMIN VIEW</button>
+      </div>
+    </div>
+    <div class="top-right" id="top-now"></div>
   </header>
+  <div class="whatif-bar" id="whatif-bar" hidden></div>
   <main class="layout">
     <aside class="col left" id="col-left" aria-label="River and observations"></aside>
-    <section class="mapwrap">
+    <section class="mapwrap" id="mapwrap">
       <div id="map"></div>
       <details class="map-layers card" id="layers-box" open><summary>Layers</summary><div id="map-layers" class="layer-list"></div></details>
       <details class="legend card" id="legend-box" open><summary>Legend</summary><div id="legend" class="legend-grid"></div></details>

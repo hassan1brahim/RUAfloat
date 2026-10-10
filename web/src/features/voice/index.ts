@@ -8,6 +8,10 @@ import "./style.css";
 
 let voice: VoiceAssistant;
 
+/** Lets other features (the accessibility panel) start, stop and follow voice mode. */
+export type VoiceControl = { toggle: () => void; active: () => boolean; onChange: (cb: (on: boolean) => void) => void };
+declare module "../../core/app" { interface Services { voice: VoiceControl } }
+
 function log(line: string) {
   const el = document.getElementById("voice-log");
   if (!el) return;
@@ -28,17 +32,18 @@ const feature: Feature = {
         <div><div class="big-icon" aria-hidden="true">🎧</div><h1>HackRU-26 voice assistant</h1><p>Press any key or tap anywhere to start.<br>It will tell you what the river is doing and where to go.</p></div>
       </div>`);
     const btn = document.createElement("button");
-    btn.id = "btn-voice"; btn.className = "btn voice-btn"; btn.title = "Voice assistant (V)";
+    // Sighted users start voice mode from the Accessibility panel; this stays for keyboard and screen-reader users (skip link, Tab).
+    btn.id = "btn-voice"; btn.className = "btn small voice-btn sr-only-focusable"; btn.title = "Voice assistant (V)";
     btn.setAttribute("aria-pressed", "false"); btn.setAttribute("aria-describedby", "voice-help");
     // the help text sits outside the button so it is the description, not part of the name
     btn.innerHTML = `<span aria-hidden="true">🎧</span><span class="lbl"> Voice assistant</span>`;
     btn.setAttribute("aria-label", "Voice assistant");
-    app.headerItem(btn);
-    btn.insertAdjacentHTML("afterend", `<span id="voice-help" class="sr-only">Hands-free mode for blind and low-vision users. Press V to start or stop. Then just talk. Keys: space for a briefing, G to be guided, N for next step, R to repeat, Escape to stop.</span>`);
+    app.heroStatus(btn);
+    btn.insertAdjacentHTML("afterend", `<span id="voice-help" class="sr-only">Hands-free mode for blind and low-vision users. Press V to start or stop. Then just talk. Keys: space for a briefing, G for your route, N for the next direction, R to repeat, Escape to stop talking.</span>`);
     $("skip-voice").onclick = (e) => { e.preventDefault(); btn.focus(); };
-    app.card({ col: "right", id: "voice-card", title: "Voice assistant", order: 10, hidden: true, extraTitle: ` <span class="src muted">V to stop</span>`, html: `
+    app.card({ col: "right", student: "right", studentOrder: 1, id: "voice-card", title: "Voice assistant", order: 10, hidden: true, extraTitle: ` <span class="src muted">V to stop</span>`, html: `
       <ul id="voice-log" class="voice-log"></ul>
-      <div class="small muted">Say “help” for what you can ask. Keys: Space briefing · G guide · N next step · R repeat · Esc stop.</div>` });
+      <div class="small muted">Say “help” for what you can ask. Keys: Space briefing · G route · N next direction · R repeat · Esc stop talking · V turn off.</div>` });
     $("map").setAttribute("role", "img");
     $("map").setAttribute("aria-label", "Flood map of Rutgers New Brunswick. Everything on the map is also available by voice: press V.");
     onSpeak((text) => log(`🔊 ${text}`));
@@ -70,11 +75,14 @@ const feature: Feature = {
     }, log);
     if (import.meta.env.DEV) (window as unknown as { __voice: VoiceAssistant }).__voice = voice;
 
+    const listeners: ((on: boolean) => void)[] = [];
     const toggle = () => {
       if (voice.active) voice.stop(); else void voice.start();
       btn.setAttribute("aria-pressed", String(voice.active)); btn.classList.toggle("on", voice.active); $("voice-card").hidden = !voice.active;
+      listeners.forEach((cb) => cb(voice.active));
     };
     btn.onclick = toggle;
+    app.provide("voice", { toggle, active: () => voice.active, onChange: (cb) => listeners.push(cb) });
     document.addEventListener("keydown", (e) => {
       if (!$("voice-gate").hidden) return;   // the start screen handles its own first key
       const t = e.target as HTMLElement;
@@ -82,7 +90,7 @@ const feature: Feature = {
       if (e.key === " " && t.closest("button, a, summary, [role=button]")) return;   // Space still presses the focused control
       if (e.key.toLowerCase() === "v" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); toggle(); return; }
       if (!voice.active) return;
-      if (e.key === "Escape") { toggle(); return; }
+      if (e.key === "Escape") { stopSpeaking(); log("Stopped talking. Voice mode is still on: press V to turn it off."); return; }   // V turns the mode off
       if ([" ", "g", "r", "n"].includes(e.key.toLowerCase())) { e.preventDefault(); voice.key(e.key.toLowerCase()); }
     });
   },
@@ -97,7 +105,7 @@ const feature: Feature = {
       e?.stopPropagation();   // otherwise the V shortcut sees this key too and toggles straight back off
       gate.hidden = true;
       document.removeEventListener("keydown", go, true);
-      $<HTMLButtonElement>("btn-voice").click();
+      app.get("voice").toggle();
       $("btn-voice").focus();
     };
     gate.onclick = () => go();

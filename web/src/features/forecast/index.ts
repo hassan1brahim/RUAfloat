@@ -7,11 +7,13 @@ type MlLive = { issued: string; now_ft: number; inputs: string[]; predictions: {
   scores: Record<string, { mae_ft_high_water: number | null; persistence_mae_ft_high_water: number | null }>; error?: string };
 type MlIda = { t: string; now: number; pred: Record<string, number>; actual: Record<string, number | null> }[];
 let live: MlLive | null = null, ida: MlIda | null = null;
+declare module "../../core/app" { interface Services { mlForecast: () => MlLive | null } }
 
 const feature: Feature = {
   id: "forecast",
   async init(app) {
     $("gauge-card").insertAdjacentHTML("beforeend", `<div class="ml" id="g-ml" aria-live="polite"></div>`);
+    app.provide("mlForecast", () => live);
     const refresh = async () => { try { live = await getJson<MlLive>("/api/forecast"); } catch { live = null; } app.refresh(); };
     await refresh();
     setInterval(refresh, 10 * 60e3);
