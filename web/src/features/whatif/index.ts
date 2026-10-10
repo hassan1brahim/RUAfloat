@@ -330,7 +330,7 @@ function spoken(app: App) {
 const feature: Feature = {
   id: "whatif",
   async init(app) {
-    app.card({ col: "left", id: "wf-card", title: "What happens next?", order: 12, hidden: true, html: `
+    app.card({ col: "left", student: "right", studentOrder: 20, id: "wf-card", title: "What happens next?", order: 12, hidden: true, html: `
       <div class="seg" id="wf-seg" role="group" aria-label="What-if view">
         <button data-v="level" class="on" aria-pressed="true">Pick a level</button>
         <button data-v="forecast" aria-pressed="false">Forecast (48 h)</button>
