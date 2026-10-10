@@ -17,6 +17,14 @@ blockquote.danger { background: #250b0e; border-color: var(--bad); }
 .contacts b { font-weight: 500; color: #c3cfdb; }
 .fine { font-size: 12px; color: #a9b6c3; }
 .fine #sources { margin-top: 6px; font-size: 11px; }
+/* Get me to safety and choosing a place are one box, outlined in white */
+#guide-card { border: 2px solid #fff; }
+body[data-view="student"] .col #guide-card h2 { font-size: 16px; font-weight: 800; color: #fff; letter-spacing: 1px; margin-bottom: 12px; }
+.safety-note { margin: 6px 0 0; font-size: 12px; color: #c3cfdb; }
+.start-box { margin: 0; }
+.start-box.need { padding: 10px 12px; border: 2px solid #fde047; border-radius: 8px; background: #1c1a0b; }
+.start-msg { font-weight: 700; color: #fde047; margin-bottom: 8px; }
+.start-label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #dbe5ef; }
 .onestep { margin-top: 8px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
 .steptext { font-size: 16px; font-weight: 600; line-height: 1.35; margin: 6px 0 2px; min-height: 44px; }
 #place-q { flex: 1; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 13px Inter, sans-serif; }
