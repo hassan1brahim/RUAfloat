@@ -7,6 +7,7 @@ import { bestPosition, circle, type Fix } from "../../lib/locate";
 import { DRY_MARGIN_DM, type Place, type Plan } from "../../lib/route";
 import { onSpeak, speak, stopSpeaking } from "../../lib/speech";
 import { NO_OBSERVATIONS } from "../roads";
+import { ic } from "../../core/icons";
 import "./style.css";
 
 /** Replays use this start when the user is off campus, so the demo works from anywhere. */
@@ -70,10 +71,10 @@ const feature: Feature = {
         m.setLayoutProperty("places-label", "visibility", shown.has("gather") ? "visible" : "none");
       }, "Facilities", { key: kind });
     }
-    app.legend(`<div><i class="dot" style="background:#22c55e"></i>Help meetup spot</div>`, { key: "gather" });
-    app.legend(`<div><i class="dot" style="background:#f472b6"></i>Hospital</div>`, { key: "hospital" });
-    app.legend(`<div><i class="dot" style="background:#60a5fa"></i>Police</div>`, { key: "police" });
-    app.legend(`<div><i class="dot" style="background:#fb923c"></i>Fire station</div>`, { key: "fire" });
+    app.legend(`<div>${ic("shelter", "#22c55e")}Help meetup spot</div>`, { key: "gather" });
+    app.legend(`<div>${ic("hospital", "#f472b6")}Hospital</div>`, { key: "hospital" });
+    app.legend(`<div>${ic("police", "#60a5fa")}Police</div>`, { key: "police" });
+    app.legend(`<div>${ic("fire", "#fb923c")}Fire station</div>`, { key: "fire" });
     app.setDefaultHint("Click a road for its status · 📍 Pick on map to set your location");
 
     // One box: where you are (or your location), then Route from this place.

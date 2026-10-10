@@ -2,6 +2,7 @@
 import type { GeoJSONSource } from "maplibre-gl";
 import type { Feature } from "../../core/app";
 import { $, getJson } from "../../core/util";
+import { ic } from "../../core/icons";
 import { Router } from "../../lib/route";
 import "./style.css";
 
@@ -37,9 +38,9 @@ const feature: Feature = {
       filter: ["all", ["!=", ["get", "tier"], "caution"], ["!", ["in", ["get", "name"], ["literal", ["footpath", "path", "service road", "bike path", "steps", "unnamed road"]]]]],
       paint: { "text-color": "#fca5a5", "text-halo-color": "#140608", "text-halo-width": 1.5 } });
     app.toggle("Closed roads", ["closed", "caution", "closed-obs", "closed-label", "major-closed"], true, "Flooding", { key: "closed" });
-    app.legend(`<div><i class="ln" style="background:#f59e0b"></i>Caution: shallow</div><div><i class="ln" style="background:#ef4444"></i>No walking: predicted</div>
-      <div><i class="ln" style="background:#ff2d95;height:5px"></i>Closed: observed</div>`, { views: "admin", key: "closed" });
-    app.legend(`<div><i class="ln" style="background:#ef4444"></i>Closed to walking</div>`, { views: "student", key: "closed" });
+    app.legend(`<div>${ic("barrier", "#f59e0b")}Caution: shallow</div><div>${ic("barrier", "#ef4444")}No walking: predicted</div>
+      <div>${ic("eye", "#ff2d95")}Closed: observed</div>`, { views: "admin", key: "closed" });
+    app.legend(`<div>${ic("barrier", "#ef4444")}Closed to walking</div>`, { views: "student", key: "closed" });
     app.card({ col: "right", id: "impact-card", title: "Impact now", order: 40, html: `
       <div class="stats" id="impact-stats">
         <div><b id="s-area" class="mono">--</b><span>km² under water</span></div>

@@ -86,6 +86,8 @@ select { width: 100%; margin-top: 4px; background: var(--panel-2); color: var(--
 .sw { display: inline-block; width: 12px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .ln { display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: 2px; }
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+.ic { display: inline-block; width: 13px; height: 13px; margin-right: 6px; vertical-align: -2px; }
+.ic svg { display: block; width: 100%; height: 100%; }
 /* top-left, under the LIVE / WHAT-IF switch (Admin) and clear of the layer panel */
 body[data-view="student"] .map-hint { top: 12px; }
 .map-hint { position: absolute; top: 56px; left: 12px; max-width: calc(100% - 300px); background: rgba(8, 12, 17, .85); border: 1px solid var(--line); padding: 6px 12px; border-radius: 99px; font-size: 12px; pointer-events: none; }
