@@ -3,6 +3,7 @@
 import type { GeoJSONSource } from "maplibre-gl";
 import type { Feature } from "../../core/app";
 import { $, BASE_FT, getJson } from "../../core/util";
+import { ic } from "../../core/icons";
 import "./style.css";
 
 type RuBuilding = { id: string; name: string; use: string; site: string; lon: number; lat: number; ring: [number, number][] | null;
@@ -43,8 +44,8 @@ const feature: Feature = {
     m.on("mouseenter", "rutgers", () => (m.getCanvas().style.cursor = "pointer"));
     m.on("mouseleave", "rutgers", () => (m.getCanvas().style.cursor = ""));
     app.toggle("Rutgers buildings", ["rutgers", "rutgers-line", "rutgers-pt"], true, "Facilities", { key: "rutgers" });
-    app.legend(`<div><i class="sw" style="background:#f59e0b"></i>RU bldg: water at walls</div><div><i class="sw" style="background:#ef4444"></i>RU bldg: ≥ 30 cm</div>`, { views: "admin", key: "rutgers" });
-    app.legend(`<div><i class="sw" style="background:#cc0033;opacity:.6"></i>Rutgers building</div><div><i class="sw" style="background:#f59e0b"></i>Rutgers bldg: water at walls</div>`, { views: "student", key: "rutgers" });
+    app.legend(`<div>${ic("building", "#f59e0b")}RU bldg: water at walls</div><div>${ic("building", "#ef4444")}RU bldg: ≥ 30 cm</div>`, { views: "admin", key: "rutgers" });
+    app.legend(`<div>${ic("building", "#cc0033", 0.6)}Rutgers building</div><div>${ic("building", "#f59e0b")}Rutgers bldg: water at walls</div>`, { views: "student", key: "rutgers" });
     app.card({ col: "left", id: "air-card", title: "Air quality · Rutgers PAMS station", order: 60, hidden: true, html: `
       <div class="stats air"><div><b id="a-pm" class="mono">--</b><span>PM2.5 µg/m³</span></div><div><b id="a-o3" class="mono">--</b><span>Ozone ppm</span></div><div><b id="a-no2" class="mono">--</b><span>NO₂ ppm</span></div></div>
       <div class="small muted" id="a-note"></div>` });

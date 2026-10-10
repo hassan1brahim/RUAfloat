@@ -9,6 +9,7 @@ import type { GeoJSONSource } from "maplibre-gl";
 import type { App, Feature } from "../../core/app";
 import { esc, getJson } from "../../core/util";
 import { NO_OBSERVATIONS, type Evidence, type Observations } from "../roads";
+import { ic } from "../../core/icons";
 import "./style.css";
 
 type Event = { date: string; what: string; source: string; url: string };
@@ -106,7 +107,7 @@ const feature: Feature = {
     m.on("mouseenter", "rain-spots", () => (m.getCanvas().style.cursor = "pointer"));
     m.on("mouseleave", "rain-spots", () => (m.getCanvas().style.cursor = ""));
     app.toggle("Rain flood spots (past floods)", ["rain-spots", "rain-spots-label"], true, "Flooding", { key: "rain" });
-    app.legend(`<div><i class="dot" style="background:#94a3b8"></i>Flooded in past heavy rain (🌧 n× = times)</div>`, { key: "rain" });
+    app.legend(`<div>${ic("rain", "#94a3b8")}Flooded in past heavy rain (🌧 n× = times)</div>`, { key: "rain" });
 
     // Heavy rain over a known spot closes its streets for routing, alongside sensors and photo reports.
     const base = app.maybe("observations");

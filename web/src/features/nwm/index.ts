@@ -3,6 +3,7 @@ import type { GeoJSONSource } from "maplibre-gl";
 import type { Feature } from "../../core/app";
 import { $, esc, et, getJson } from "../../core/util";
 import { filterNwm, nwmNear, type Nwm } from "./filter";
+import { ic } from "../../core/icons";
 
 let nwm: ReturnType<typeof filterNwm> | null = null;
 
@@ -16,7 +17,7 @@ const feature: Feature = {
     app.map.addLayer({ id: "nwm-reach", type: "line", source: "nwm-reach", layout: { "line-cap": "round" },
       paint: { "line-color": ["match", ["get", "kind"], "rapid", "#e879f9", "#a78bfa"], "line-width": ["match", ["get", "kind"], "rapid", 6, 4], "line-opacity": 0.9 } });
     app.toggle("NOAA stream forecast", ["nwm-inun", "nwm-reach"], true, "Flooding", { views: "admin", key: "nwm" });
-    app.legend(`<div><i class="ln" style="background:#e879f9;height:5px"></i>NOAA flash flood</div>`, { views: "admin", key: "nwm" });
+    app.legend(`<div>${ic("lightning", "#e879f9")}NOAA flash flood</div>`, { views: "admin", key: "nwm" });
     app.card({ col: "left", id: "nwm-card", title: "NOAA stream forecast", order: 30,
       extraTitle: ` <a class="src" href="https://water.noaa.gov/" target="_blank" rel="noopener">NWPS ↗</a>`, html: `<div id="nwm" class="small"><span class="muted">Loading National Water Model…</span></div>` });
     app.provide("nwmNear", (lon, lat) => nwmNear(nwm, lon, lat));
