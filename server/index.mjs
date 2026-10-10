@@ -1,5 +1,6 @@
 // RUAfloat API server. Each feature registers its routes from routes/*.mjs; keys stay here, never in the browser.
 // Run: npm run dev (with web) or SENSOR_TOKEN=... npm run server
+import "./env.mjs";   // first: .env must be loaded before other modules read process.env
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";

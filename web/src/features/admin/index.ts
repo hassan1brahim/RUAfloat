@@ -2,6 +2,7 @@
 import type { App, Feature } from "../../core/app";
 import { $, esc, et } from "../../core/util";
 import "./style.css";
+import { adminPost } from "../../lib/admin-token";
 
 type Building = { id: string; name: string; use: string; housing: boolean; lon: number; lat: number; touch_ft: number; deep_ft: number | null;
   margin_ft: number; status: "deep" | "at walls" | "near" | "dry"; reached_at: string | null };
@@ -28,7 +29,6 @@ let picking: { kind: "road" | "building"; target: string; lon: number; lat: numb
 
 const NEXT_LABEL: Partial<Record<DispatchStatus, string>> = { pending: "Acknowledge", acknowledged: "Mark en route", "en-route": "Mark on scene", "on-scene": "Clear" };
 const UNIT_KIND = { police: "Police", fire: "Fire", hospital: "Hospital" };
-const postJson = (url: string, body: unknown) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 /** Dispatch button for a row, or the open dispatch's unit and status. */
 function dispatchCell(kind: "road" | "building", name: string, lon: number | null, lat: number | null) {
@@ -162,7 +162,7 @@ const feature: Feature = {
       const verdict = t.dataset.verdict;
       if (!verdict) return;
       const err = $("adm-review-err");
-      const r = await postJson(`/api/reports/${item.id}/review`, { verdict });
+      const r = await adminPost(`/api/reports/${item.id}/review`, { verdict }, err);
       if (!r.ok) { err.textContent = (await r.json().catch(() => null))?.error || `Request failed (${r.status}).`; return; }
       err.textContent = "";
       await load(app);
@@ -175,7 +175,7 @@ const feature: Feature = {
       const sel = $<HTMLSelectElement>("adm-disp-unit").value, unit = sel || $<HTMLInputElement>("adm-disp-other").value.trim();
       const err = $("adm-disp-err");
       if (!unit) return void (err.textContent = "Pick or type a unit.");
-      const r = await postJson("/api/dispatch", { ...picking, unit });
+      const r = await adminPost("/api/dispatch", { ...picking, unit }, err);
       if (!r.ok) return void (err.textContent = (await r.json()).error);
       closePicker();
       await load(app);
@@ -183,7 +183,7 @@ const feature: Feature = {
     $("adm-disp").addEventListener("click", async (e) => {
       const t = e.target as HTMLElement, li = t.closest<HTMLElement>("li[data-id]");
       if (!li || !t.dataset.from) return;
-      await postJson(`/api/dispatch/${li.dataset.id}/advance`, { from: t.dataset.from });
+      await adminPost(`/api/dispatch/${li.dataset.id}/advance`, { from: t.dataset.from }, li);
       await load(app);   // a 409 means the other screen moved it first; reload shows where it is
     });
     setInterval(() => app.state.mode === "live" && load(app), 30_000);

@@ -12,6 +12,9 @@ export function tokenOk(header, token = process.env.SENSOR_TOKEN || "") {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+/** Admin actions (report review, dispatch): open on a laptop with no ADMIN_TOKEN, token required wherever one is set (the live site). */
+export const adminOk = (req) => !process.env.ADMIN_TOKEN || tokenOk(req.headers["x-admin-token"], process.env.ADMIN_TOKEN);
+
 export default function register(api, ctx) {
   const config = JSON.parse(fs.readFileSync(path.join(ctx.server, "sensors.config.json"), "utf8"));
   const sensors = createSensors(config);

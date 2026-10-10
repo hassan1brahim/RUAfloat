@@ -2,6 +2,7 @@
 import "../core/base.css";
 import "./style.css";
 import { $, esc, et } from "../core/util";
+import { adminPost } from "../lib/admin-token";
 
 type Status = "pending" | "acknowledged" | "en-route" | "on-scene" | "cleared";
 type Dispatch = { id: string; target: string; kind: "road" | "building"; unit: string; status: Status; created: string; history: { status: Status; at: string }[] };
@@ -60,7 +61,7 @@ async function tick() {
 document.body.addEventListener("click", async (e) => {
   const t = e.target as HTMLElement, from = t.dataset.from, id = t.closest<HTMLElement>("[data-id]")?.dataset.id;
   if (!from || !id) return;
-  await fetch(`/api/dispatch/${id}/advance`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from }) });
+  await adminPost(`/api/dispatch/${id}/advance`, { from }, t);
   await tick();   // a 409 means the admin moved it first; the reload shows where it is
 });
 

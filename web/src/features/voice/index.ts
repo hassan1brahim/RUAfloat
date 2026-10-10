@@ -33,11 +33,11 @@ const feature: Feature = {
         <div><div class="big-icon" aria-hidden="true">🎧</div><h1>RUAfloat voice assistant</h1><p>Press any key or tap anywhere to start.<br>It will tell you what the river is doing and where to go.</p></div>
       </div>`);
     const btn = document.createElement("button");
-    // Sighted users start voice mode from the Accessibility panel; this stays for keyboard and screen-reader users (skip link, Tab).
-    btn.id = "btn-voice"; btn.className = "btn small voice-btn sr-only-focusable"; btn.title = "Voice assistant (V)";
+    // Visible to everyone: the Accessibility panel that used to start voice mode is gone, and a demo has to show it.
+    btn.id = "btn-voice"; btn.className = "btn small voice-btn"; btn.title = "Talk to RUAfloat (V)";
     btn.setAttribute("aria-pressed", "false"); btn.setAttribute("aria-describedby", "voice-help");
     // the help text sits outside the button so it is the description, not part of the name
-    btn.innerHTML = `<span aria-hidden="true">🎧</span><span class="lbl"> Voice assistant</span>`;
+    btn.innerHTML = `<span aria-hidden="true">🎧</span><span class="lbl"> Talk</span>`;
     btn.setAttribute("aria-label", "Voice assistant");
     app.heroStatus(btn);
     btn.insertAdjacentHTML("afterend", `<span id="voice-help" class="sr-only">Hands-free mode for blind and low-vision users. Press V to start or stop. Then just talk. Keys: space for a briefing, G for your route, N for the next direction, R to repeat, Escape to stop talking.</span>`);
