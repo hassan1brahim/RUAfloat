@@ -1,0 +1,17 @@
+{
+  "name": "hackru-26",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/admin"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,admin \"node apps/server/index.mjs\" \"npm run dev -w apps/admin\"",
+    "start:server": "node apps/server/index.mjs",
+    "warm": "node apps/server/warm.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}

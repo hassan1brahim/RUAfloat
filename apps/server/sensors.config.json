@@ -1,0 +1,11 @@
+[
+  {
+    "id": "rt18-low-point",
+    "name": "Route 18 underpass (demo sensor)",
+    "road": "Route 18",
+    "lat": 40.4967,
+    "lon": -74.4461,
+    "mountCm": 250,
+    "note": "Ultrasonic sensor on a pole, pointing down: depth = mount height - measured distance."
+  }
+]
