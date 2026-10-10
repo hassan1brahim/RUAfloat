@@ -21,6 +21,7 @@ export default function RightPanel({
 }) {
   const roads = mapData?.roadsAtRisk ?? [];
   const buildings = mapData?.buildingsAtRisk ?? [];
+  const places = mapData?.places ?? [];
 
   return (
     <div className="col right">
@@ -36,7 +37,7 @@ export default function RightPanel({
                   <span>{r.name} <span className={`tag ${r.tier}`}>{r.tier}</span>{r.closedBy && <span className="muted" style={{ marginLeft: 4 }}>({SOURCE_LABEL[r.closedBy]})</span>}</span>
                 </div>
                 {r.evidence[0] && <div className="muted" style={{ margin: "2px 0 6px" }}>{r.evidence[0].text}</div>}
-                <DispatchControl target={r.name} kind="road" lat={mid[1]} lon={mid[0]} dispatches={dispatches} onSignal={onSignalDispatch} onAdvance={onAdvanceDispatch} />
+                <DispatchControl target={r.name} kind="road" lat={mid[1]} lon={mid[0]} places={places} dispatches={dispatches} onSignal={onSignalDispatch} onAdvance={onAdvanceDispatch} />
               </li>
             );
           })}
@@ -53,7 +54,7 @@ export default function RightPanel({
                 <span>{b.name} <span className={`tag ${b.tier}`}>{b.tier}</span>{b.closedBy && <span className="muted" style={{ marginLeft: 4 }}>({SOURCE_LABEL[b.closedBy]})</span>}</span>
               </div>
               {b.evidence[0] && <div className="muted" style={{ margin: "2px 0 6px" }}>{b.evidence[0].text}</div>}
-              <DispatchControl target={b.name} kind="building" lat={b.lat} lon={b.lon} dispatches={dispatches} onSignal={onSignalDispatch} onAdvance={onAdvanceDispatch} />
+              <DispatchControl target={b.name} kind="building" lat={b.lat} lon={b.lon} places={places} dispatches={dispatches} onSignal={onSignalDispatch} onAdvance={onAdvanceDispatch} />
             </li>
           ))}
         </ul>

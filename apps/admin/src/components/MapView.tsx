@@ -43,7 +43,7 @@ export default function MapView({
                 <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>{r.evidence.map((e, i) => <li key={i} style={{ fontSize: 11 }}>{e.text}</li>)}</ul>
               )}
               <div style={{ marginTop: 6 }}>
-                <DispatchControl target={r.name} kind="road" lat={mid[1]} lon={mid[0]} dispatches={dispatches} onSignal={onSignalDispatch} onAdvance={onAdvanceDispatch} />
+                <DispatchControl target={r.name} kind="road" lat={mid[1]} lon={mid[0]} places={mapData?.places ?? []} dispatches={dispatches} onSignal={onSignalDispatch} onAdvance={onAdvanceDispatch} />
               </div>
             </Popup>
           </Polyline>
@@ -56,7 +56,7 @@ export default function MapView({
             <b>{b.name}</b><br />Status: <span style={{ textTransform: "uppercase" }}>{b.tier}</span>
             {b.evidence.length > 0 && <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>{b.evidence.map((e, i) => <li key={i} style={{ fontSize: 11 }}>{e.text}</li>)}</ul>}
             <div style={{ marginTop: 6 }}>
-              <DispatchControl target={b.name} kind="building" lat={b.lat} lon={b.lon} dispatches={dispatches} onSignal={onSignalDispatch} onAdvance={onAdvanceDispatch} />
+              <DispatchControl target={b.name} kind="building" lat={b.lat} lon={b.lon} places={mapData?.places ?? []} dispatches={dispatches} onSignal={onSignalDispatch} onAdvance={onAdvanceDispatch} />
             </div>
           </Popup>
         </CircleMarker>
