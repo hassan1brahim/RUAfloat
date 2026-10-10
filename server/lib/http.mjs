@@ -1,5 +1,5 @@
 // Small HTTP helpers shared by every route: JSON bodies, responses, upstream fetches, and a TTL cache.
-export const UA = "hackru-26/0.1 (Rutgers flood command)";
+export const UA = "ruafloat/0.1 (Rutgers flood command)";
 
 export function readBody(req, limit = 64_000) {
   return new Promise((resolve, reject) => {

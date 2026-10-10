@@ -1,4 +1,4 @@
-// HackRU API server. Each feature registers its routes from routes/*.mjs; keys stay here, never in the browser.
+// RUAfloat API server. Each feature registers its routes from routes/*.mjs; keys stay here, never in the browser.
 // Run: npm run dev (with web) or SENSOR_TOKEN=... npm run server
 import http from "node:http";
 import fs from "node:fs";
