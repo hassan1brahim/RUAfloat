@@ -53,7 +53,8 @@ export const server = http.createServer(async (req, res) => {
   }
 });
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Compare paths, not URLs: import.meta.url percent-encodes spaces, so the URL check never matched in folders with spaces.
+if (fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   if (!process.env.SENSOR_TOKEN) console.warn("SENSOR_TOKEN not set: sensor readings will be rejected");
   server.listen(PORT, () => console.log(`API on :${PORT} · ${table.length} routes`));
 }
