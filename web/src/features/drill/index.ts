@@ -19,17 +19,36 @@ function current(app: App): Scenario {
   return { mode: "live" };
 }
 
+/** No token yet: ask for it right here, instead of sending the admin to another panel. */
+function askToken(app: App, why: string) {
+  const note = $("drill-note");
+  if (note.querySelector("input")) return;
+  note.className = "drill-note warn";
+  note.innerHTML = `${why} <input id="drill-token" type="password" placeholder="Admin token" aria-label="Admin token" /> <button id="drill-share" class="btn small">Share with students</button>`;
+  const go = () => {
+    try { sessionStorage.setItem("admin-token", $<HTMLInputElement>("drill-token").value.trim()); } catch { /* storage blocked */ }
+    note.innerHTML = ""; sentKey = ""; share(app);
+  };
+  $("drill-share").onclick = go;
+  $("drill-token").onkeydown = (e) => { if (e.key === "Enter") go(); };
+}
+
 /** Admin: send the scenario at most twice a second (the replay steps 4 times a second). */
 function share(app: App) {
   const s = current(app), key = JSON.stringify(s);
   if (key === sentKey || pending) return;
+  if (!token()) { if (s.mode !== "live") askToken(app, "Students don't see this yet:"); return; }
   pending = window.setTimeout(async () => {
     pending = 0;
     const now = current(app), nowKey = JSON.stringify(now);
     const r = await fetch("/api/scenario", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-token": token() }, body: JSON.stringify(now) }).catch(() => null);
     const ok = !!r?.ok;
     if (ok) sentKey = nowKey;
-    $("drill-note").textContent = ok ? (now.mode === "live" ? "" : "Students see this drill") : r?.status === 401 ? "Students don't see this: save the admin token under Needs a decision" : "Couldn't reach the server";
+    if (r?.status === 401) {
+      try { sessionStorage.removeItem("admin-token"); } catch { /* ignore */ }
+      return askToken(app, "Wrong admin token:");
+    }
+    $("drill-note").textContent = ok ? (now.mode === "live" ? "" : "Students see this drill") : "Couldn't reach the server";
     $("drill-note").className = `drill-note ${ok ? "ok" : "warn"}`;
   }, 500);
 }
