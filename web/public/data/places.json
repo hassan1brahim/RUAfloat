@@ -47,15 +47,6 @@
 "hand": 65535
 },
 {
-"name": "Cook-Douglass Recreation Center",
-"kind": "gather",
-"lon": -74.4326704,
-"lat": 40.4785548,
-"campus": "Cook",
-"block": 65535,
-"hand": 65535
-},
-{
 "name": "Douglass Student Center",
 "kind": "gather",
 "lon": -74.4366434,
@@ -65,17 +56,6 @@
 "hand": 65535,
 "capacity": 900,
 "capacity_from": "Douglass Student Center (37,975 assignable ft\u00b2 / 40)"
-},
-{
-"name": "Livingston Recreation Center",
-"kind": "gather",
-"lon": -74.4309003,
-"lat": 40.521115,
-"campus": "Livingston",
-"block": 65535,
-"hand": 65535,
-"capacity": 850,
-"capacity_from": "Livingston Recreation Center (34,781 assignable ft\u00b2 / 40)"
 },
 {
 "name": "Livingston Student Center",
@@ -114,15 +94,6 @@
 "lon": -74.4495108,
 "lat": 40.4952979,
 "campus": null,
-"block": 65535,
-"hand": 65535
-},
-{
-"name": "Sonny A. Werblin Recreation Center",
-"kind": "gather",
-"lon": -74.4608282,
-"lat": 40.5196233,
-"campus": "Busch",
 "block": 65535,
 "hand": 65535
 },
