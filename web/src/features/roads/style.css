@@ -1,0 +1,6 @@
+.chip.obs { border-color: #7a1450; color: #ff8cc6; cursor: default; }
+.chip.red { border-color: #5a1d1d; color: #fca5a5; cursor: default; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.stats div { background: var(--panel-2); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; }
+.stats b { font-size: 22px; }
+.stats span { font-size: 11px; color: var(--muted); }

@@ -1,0 +1,181 @@
+/** "Where do I go?": start point, nearest dry gathering point, walking route, spoken script (AI + guard), contacts. */
+import maplibregl, { type GeoJSONSource } from "maplibre-gl";
+import type { Feature, Pt } from "../../core/app";
+import { $, esc, fmtFt, getJson, postJson } from "../../core/util";
+import { DRY_MARGIN_DM, type Place, type Plan } from "../../lib/route";
+import { onSpeak, speak } from "../../lib/speech";
+import { NO_OBSERVATIONS } from "../roads";
+import "./style.css";
+
+export type Start = { name: string; lon: number; lat: number };
+export type Guide = {
+  places: Place[]; starts: Start[];
+  start: () => Start | null; setStart: (s: Start) => void;
+  plan: () => Plan | null; run: (silent?: boolean) => Promise<{ script: string; plan: Plan | null }>;
+};
+declare module "../../core/app" { interface Services { guide: Guide } }
+
+type Res = { script: string; by: string; check: string[]; rejected?: string; fixes?: string[] };
+let places: Place[] = [], starts: Start[] = [], start: Start | null = null, plan: Plan | null = null, lastScript = "";
+let marker: maplibregl.Marker | null = null;
+
+function placesGeoJSON(rise: number) {
+  return { type: "FeatureCollection" as const, features: places.map((p) => ({ type: "Feature" as const,
+    properties: { name: p.name, kind: p.kind, capacity: p.capacity, wet: p.block <= rise + (p.kind === "gather" ? DRY_MARGIN_DM : 0) },
+    geometry: { type: "Point" as const, coordinates: [p.lon, p.lat] } })) };
+}
+
+const feature: Feature = {
+  id: "guide",
+  clickPriority: 10,
+  async init(app) {
+    [places, starts] = await Promise.all([getJson<Place[]>("/data/places.json"), getJson<Start[]>("/data/starts.json")]);
+    starts = [...starts, ...places.filter((p) => p.kind === "gather")].sort((a, b) => a.name.localeCompare(b.name));
+    const m = app.map;
+    m.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    m.addLayer({ id: "route-glow", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#22d3ee", "line-width": 12, "line-opacity": 0.25, "line-blur": 4 } });
+    m.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#67e8f9", "line-width": 4 } });
+    m.addSource("places", { type: "geojson", data: placesGeoJSON(0) });
+    m.addLayer({ id: "places", type: "circle", source: "places", paint: {
+      "circle-radius": ["match", ["get", "kind"], "gather", 7, 5],
+      "circle-color": ["case", ["get", "wet"], "#ef4444", ["match", ["get", "kind"], "gather", "#22c55e", "hospital", "#f472b6", "police", "#60a5fa", "#fb923c"]],
+      "circle-stroke-color": "#081018", "circle-stroke-width": 2 } });
+    m.addLayer({ id: "places-label", type: "symbol", source: "places", filter: ["==", ["get", "kind"], "gather"],
+      layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-offset": [0, 1.2], "text-anchor": "top", "text-optional": true },
+      paint: { "text-color": "#cfe8d6", "text-halo-color": "#081018", "text-halo-width": 1.5 } });
+    m.on("mouseenter", "places", () => (m.getCanvas().style.cursor = "pointer"));
+    m.on("mouseleave", "places", () => (m.getCanvas().style.cursor = ""));
+    app.toggle("Facilities", ["places", "places-label"]);
+    app.legend(`<div><i class="dot" style="background:#22c55e"></i>Dry gathering pt</div><div><i class="dot" style="background:#f472b6"></i>Hospital</div>`);
+    app.setDefaultHint("Click a road for its status · 📍 Pick on map to set your location");
+
+    app.card({ col: "right", id: "guide-card", title: "Where do I go?", order: 20, html: `
+      <label class="small muted" for="start-select">You are at</label>
+      <select id="start-select"><option value="">Choose a place, or pick on the map…</option></select>
+      <div class="row gap"><button id="btn-locate" class="btn ghost small"><span aria-hidden="true">◎</span> My location</button><button id="btn-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button></div>
+      <div class="row gap"><button id="btn-guide" class="btn primary"><span aria-hidden="true">🔊</span> Guide me</button></div>
+      <div id="guide-out" class="guide-out" hidden>
+        <div class="dest" id="g-dest" aria-live="polite"></div><blockquote id="g-script"></blockquote>
+        <div class="row gap small"><button id="btn-replay" class="btn ghost small"><span aria-hidden="true">↻</span> Play again</button><span id="g-voice" class="muted"></span></div>
+        <div class="badge-row" id="g-by"></div><ol class="steps" id="g-steps"></ol>
+        <div id="g-replan" class="replan" hidden>River changed: route re-planned. <button id="btn-respeak" class="link">Hear it</button></div>
+      </div>` });
+    app.card({ col: "right", id: "contacts-card", title: "Emergency contacts", order: 70, html: `
+      <ul class="contacts">
+        <li><b>Emergency</b><a href="tel:911">911</a></li>
+        <li><b>Rutgers Police (NB alt. line)</b><a href="tel:7329327111">(732) 932-7111</a></li>
+        <li><b>RU Alert sign-up</b><a href="https://emergency.rutgers.edu/ru-alert/" target="_blank" rel="noopener">emergency.rutgers.edu</a></li>
+        <li><b>NJ Office of Emergency Mgmt</b><a href="https://ready.nj.gov/" target="_blank" rel="noopener">ready.nj.gov</a></li>
+        <li><b>NJ road closures</b><a href="https://www.511nj.org/" target="_blank" rel="noopener">511nj.org</a></li>
+        <li><b>NJ Flood Mapper</b><a href="https://njfloodmapper.org/" target="_blank" rel="noopener">njfloodmapper.org</a></li>
+      </ul>` });
+    $("impact-stats")?.insertAdjacentHTML("beforeend", `<div><b id="s-gather" class="mono">--</b><span>gathering pts dry</span></div>`);
+
+    const sel = $<HTMLSelectElement>("start-select");
+    for (const s of starts) sel.add(new Option(s.name, JSON.stringify(s)));
+    sel.onchange = () => sel.value && setStart(JSON.parse(sel.value));
+    $("btn-guide").onclick = () => void run();
+    $("btn-pick").onclick = () => app.pick("Click the map where you are", (pt: Pt) => setStart({ name: "Pinned location", ...pt }));
+    $("btn-replay").onclick = () => void speak(lastScript);
+    $("btn-respeak").onclick = () => void run();
+    $("btn-locate").onclick = () => navigator.geolocation?.getCurrentPosition(
+      (p) => setStart({ name: "Your location", lon: p.coords.longitude, lat: p.coords.latitude }),
+      () => app.hint("Location unavailable: pick on the map instead"));
+
+    function setStart(s: Start) {
+      start = s;
+      app.hint(`From: ${s.name} · click a road for its status`);
+      sel.selectedIndex = Math.max(0, [...sel.options].findIndex((o) => o.text === s.name));
+      marker?.remove();
+      const el = document.createElement("div");
+      el.style.cssText = "width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid #cc0033;box-shadow:0 0 0 6px rgba(204,0,51,.25)";
+      marker = new maplibregl.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(app.map);
+    }
+
+    function showPlan(p: Plan | null) {
+      plan = p;
+      (app.map.getSource("route") as GeoJSONSource).setData(p ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: p.coords } } : { type: "FeatureCollection", features: [] });
+      $("g-steps").innerHTML = p ? p.steps.map((s) => `<li>${s.say}</li>`).join("") : "";
+      $("g-dest").innerHTML = p
+        ? `→ ${p.dest.name}<small>${(p.meters / 1000).toFixed(2)} km · ~${Math.round(p.minutes)} min walk · ${p.dest.campus ?? ""}${p.dest.capacity ? ` · ~${p.dest.capacity.toLocaleString()} people (est.)` : ""} · gathering point, not an official shelter</small>`
+        : "No dry gathering point reachable on foot";
+    }
+    showPlanRef = showPlan;
+
+    async function run(silent = false): Promise<{ script: string; plan: Plan | null }> {
+      if (!start) { app.hint("First: pick where you are"); return { script: "", plan: null }; }
+      const btn = $<HTMLButtonElement>("btn-guide");
+      btn.disabled = true; btn.textContent = "Planning…";
+      $("guide-out").hidden = false; $("g-replan").hidden = true;
+      const rise = app.rise(), s = start, obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
+      const p = app.get("grid").depthAt(s.lon, s.lat, rise) >= 3 ? null : app.get("router").plan(s.lon, s.lat, rise, places, obs.closed);
+      showPlan(p);
+      if (p) {
+        const b = new maplibregl.LngLatBounds();
+        p.coords.forEach((c) => b.extend(c));
+        app.map.fitBounds(b, { padding: 90, maxZoom: 16, duration: 900 });
+      }
+      const scenario = app.state.mode === "live" ? "live river reading" : app.state.mode === "ida" ? "Hurricane Ida 2021 replay" : `what-if, ${fmtFt(app.state.stageFt)} at Bound Brook`;
+      const payload = p
+        ? { start: s.name, dest: p.dest.name, meters: p.meters, minutes: p.minutes, steps: p.steps, avoid: p.avoid, scenario }
+        : { start: s.name === "Pinned location" ? "your location" : s.name, shelter_in_place: true, steps: [], avoid: [], scenario };
+      let res: Res;
+      try { res = await postJson<Res>("/api/guide", payload); }
+      catch { res = { script: p ? `Walk to ${p.dest.name}, about ${Math.round(p.minutes)} minutes. If you are in danger, call 9 1 1.` : "Move to the highest floor you can reach and call 9 1 1.", by: "offline", check: ["API offline"] }; }
+      const q = $("g-script");
+      q.textContent = res.script;
+      q.className = p ? "" : "danger";
+      $("g-by").innerHTML = [
+        `<span class="badge">script: ${esc(res.by)}</span>`,
+        !p ? `<span class="badge ok">fixed shelter-in-place script</span>` : res.check.length ? `<span class="badge warn" title="${res.rejected ? "Rejected: " + esc(res.rejected) : ""}">guard: ${esc(res.check.join("; "))}</span>` : `<span class="badge ok">guard: every name is on the route</span>`,
+        ...(res.fixes ?? []).map((f) => `<span class="badge">${esc(f)}</span>`),
+        `<span class="badge">${scenario}</span>`,
+      ].join("");
+      lastScript = res.script;
+      btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Guide me`;
+      if (!silent) void speak(res.script);
+      return { script: res.script, plan: p };
+    }
+
+    // phones: the guide card scrolls away under the map, so keep a thumb-reach shortcut to it
+    const fab = document.createElement("button");
+    fab.className = "btn primary go-fab";
+    fab.innerHTML = `<span aria-hidden="true">🧭</span> Where do I go?`;
+    fab.onclick = () => { $("guide-card").scrollIntoView({ behavior: "smooth", block: "start" }); sel.focus({ preventScroll: true }); };
+    document.body.append(fab);
+    new IntersectionObserver(([e]) => (fab.hidden = e.isIntersecting), { threshold: 0.2 }).observe($("guide-card"));
+
+    onSpeak((_, voice) => { const el = document.getElementById("g-voice"); if (el) el.textContent = `Voice: ${voice}`; });
+    app.provide("guide", { places, starts, start: () => start, setStart, plan: () => plan, run });
+  },
+  update(app) {
+    const rise = app.rise();
+    (app.map.getSource("places") as GeoJSONSource).setData(placesGeoJSON(rise));
+    const gathers = places.filter((p) => p.kind === "gather");
+    $("s-gather").textContent = `${gathers.filter((p) => p.block > rise + DRY_MARGIN_DM).length}/${gathers.length}`;
+    if (plan && start) {
+      const obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
+      const next = app.get("router").plan(start.lon, start.lat, rise, places, obs.closed);
+      const changed = !next || next.dest.name !== plan.dest.name || Math.abs(next.meters - plan.meters) > 25;
+      if (changed) { showPlanRef(next); $("g-replan").hidden = false; }
+    }
+  },
+  click(app, pt, ev) {
+    const f = app.map.queryRenderedFeatures(ev.point, { layers: ["places"] })[0];
+    if (!f) return false;
+    const p = f.properties as { name: string; kind: string; wet: boolean; capacity?: number };
+    app.popup(pt, `<b>${p.name}</b><br>${p.kind}${p.capacity ? ` · ~${p.capacity.toLocaleString()} people (est. from floor area)` : ""}${p.wet ? " · <span style=color:#f87171>flood risk now</span>" : ""}`);
+    return true;
+  },
+  facts(app) {
+    const rise = app.rise();
+    return {
+      gathering_points_dry: places.filter((p) => p.kind === "gather" && p.block > rise + DRY_MARGIN_DM).map((p) => p.name),
+      you_are_at: start?.name ?? null,
+      route: plan ? { to: plan.dest.name, minutes: Math.round(plan.minutes), steps: plan.steps.map((x) => x.say) } : null,
+      emergency_numbers: { emergency: "911", rutgers_police: "732-932-7111" },
+    };
+  },
+};
+let showPlanRef: (p: Plan | null) => void = () => {};
+export default feature;

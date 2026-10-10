@@ -1,0 +1,11 @@
+.cams { display: flex; flex-direction: column; gap: 10px; }
+.cam img { width: 100%; border-radius: 6px; display: block; background: #000; aspect-ratio: 16/9; object-fit: cover; }
+.cam .meta { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; margin-top: 4px; }
+.cam .res { font-size: 12px; margin-top: 4px; }
+.cam .row { margin-top: 4px; flex-wrap: wrap; }
+#r-photo { margin-top: 10px; width: 100%; font-size: 12px; color: var(--muted); }
+#r-note { width: 100%; margin-top: 8px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 13px Inter, sans-serif; resize: vertical; }
+#r-send { width: 100%; margin-top: 8px; }
+#r-out img { width: 100%; border-radius: 6px; margin-top: 8px; }
+.sensor-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sensor-row b.big2 { font: 700 22px var(--mono); }
