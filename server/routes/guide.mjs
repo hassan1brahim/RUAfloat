@@ -14,8 +14,12 @@ const ELEVEN_MODEL = process.env.ELEVENLABS_MODEL || "eleven_flash_v2_5";
 const fmtMin = (m) => (m < 1.5 ? "about a minute" : `about ${Math.round(m)} minutes`);
 
 /** Built only from the route data. Always correct; used when Gemini is off or fails the check. */
+// Closer than this to the gathering point, "walk there" makes no sense: tell them to stay.
+const ALREADY_THERE_M = 60;
+
 function templateScript(g) {
   if (g.shelter_in_place) return `Flood water is already around ${g.start}. Do not walk or drive through it. Move to the highest floor you can reach and call 9 1 1. Rutgers police: ${RUPD}.`;
+  if (g.meters < ALREADY_THERE_M) return `You are already at ${g.dest}, a gathering point on high ground that is predicted to stay dry. Stay here unless you see water coming in. This is not an official shelter. If you are in danger, call 9 1 1.`;
   const steps = g.steps.slice(0, 4).map((s) => s.say).join(" ");
   const avoid = g.avoid.length ? ` Avoid ${g.avoid.slice(0, 2).join(" and ")}, flooded in this scenario.` : "";
   return `Raritan flood guidance. From ${g.start}, walk to ${g.dest}, ${fmtMin(g.minutes)}. ${steps}${avoid} This route only avoids flooding we know about, so turn back if you see water. If you are in danger, call 9 1 1.`;
@@ -39,7 +43,7 @@ export default function register(api, ctx) {
 
   async function guide(g) {
     const base = templateScript(g);
-    if (g.shelter_in_place || !GEMINI_KEY) return { script: base, by: "template", check: [] };
+    if (g.shelter_in_place || g.meters < ALREADY_THERE_M || !GEMINI_KEY) return { script: base, by: "template", check: [] };
     try {
       let script = await gemini({ timeoutMs: GEMINI_TIMEOUT_MS, temperature: 0.3, parts: `You write spoken emergency guidance for a Rutgers student during a Raritan River flood.
 Use ONLY the facts in this JSON. Do not add streets, buildings, distances or times that are not in it.

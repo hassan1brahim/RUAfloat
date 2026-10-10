@@ -12,7 +12,9 @@ import nwm from "./nwm";
 import forecast from "./forecast";
 import voice from "./voice";
 import student from "./student";
+import a11y from "./a11y";
+import whatif from "./whatif";
 import share from "./share";
 import admin from "./admin";
 
-export const FEATURES: Feature[] = [river, flood, roads, guide, layers, buildings, roadpanel, detection, nwm, forecast, voice, student, share, admin];
+export const FEATURES: Feature[] = [river, flood, roads, guide, layers, buildings, roadpanel, detection, nwm, forecast, voice, student, a11y, whatif, share, admin];
