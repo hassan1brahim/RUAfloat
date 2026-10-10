@@ -109,8 +109,7 @@ export class App {
       b.setAttribute("aria-pressed", String(b.dataset.view === v));
     });
     document.querySelectorAll<HTMLElement>(".col > .card").forEach((el) => this.place(el));
-    // Students have no scenario controls: they see whatever drill the admin is running (or the live river).
-    if (v === "student") this.maybe("drill")?.follow();
+    // Students have no scenario controls; switching views keeps the scenario, so Student shows the admin's What-if.
     this.map?.resize();
     this.update();
   }
