@@ -67,7 +67,7 @@ function syncUi() {
 /** The time beside the level: now when live, the replay hour during Ida, none for a made-up level. */
 function stampTop() {
   const m = app.state.mode;
-  $("top-time").textContent = m === "live" ? `${et(new Date().toISOString())} ET` : m === "ida" ? `Ida · ${et(ida.series[idaIdx][0])} ET` : "What-if level";
+  $("top-time").textContent = m === "live" ? `${et(new Date().toISOString())} ET` : "";
 }
 
 function togglePlay() {
@@ -83,7 +83,8 @@ function togglePlay() {
 function applyIda() {
   const [t, ft] = ida.series[idaIdx];
   $<HTMLInputElement>("ida-scrub").value = String(idaIdx);
-  $("ida-label").textContent = `${et(t)} ET · crest 42.13 ft at ${et(ida.crest[0])} ET (USGS record)`;
+  const hour = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
+  $("ida-label").textContent = `${et(t)} · crest 42.13 ft at ${hour(ida.crest[0])} ET`;
   $("g-note").textContent = "Hurricane Ida remnants, Sept 1–3, 2021. USGS 01403060 readings, hourly.";
   drawSpark(ida.series, idaIdx, []);
   app.setStage(ft);

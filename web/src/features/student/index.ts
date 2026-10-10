@@ -23,15 +23,11 @@ const feature: Feature = {
     el.classList.toggle("bad", cat !== "normal");
     const prefix = whatIf ? "What-if: " : "";
     const headline = cat === "normal" ? `${prefix}No flooding ${whatIf ? "at this level" : "near campus"}` : `${prefix}${cat[0].toUpperCase() + cat.slice(1)} flooding near campus`;
-    const detail = cat === "normal" ? `${dry}/${gathers.length} help meetup spots dry` : `${named.length} roads closed to walking · ${dry}/${gathers.length} help meetup spots dry`;
-    // Our ML forecast is always on in live mode; a what-if shows a scenario instead.
-    const ml = app.maybe("mlForecast")?.();
-    const forecast = whatIf ? "Scenario, not the live river"
-      : ml && !ml.error ? `ML forecast: ${ml.predictions.map((p) => `+${p.h} h ${p.ft.toFixed(1)}`).join(" · ")} ft` : "ML forecast unavailable";
+    const detail = `${named.length ? `${named.length} roads closed to walking` : "No roads closed"} · ${dry}/${gathers.length} meetup spots dry`;
     // Tell screen readers when the situation changes category, not every redraw (the Ida replay redraws 4 times a second).
     if (lastHeadline && headline !== lastHeadline) announce(headline);
     lastHeadline = headline;
-    el.innerHTML = `<b>${headline}</b> <span class="muted">· ${detail}</span><div class="now-ml mono">${forecast}</div>`;
+    el.textContent = detail;   // the headline is for screen readers (announced above); the chip shows the category
   },
 };
 export default feature;
