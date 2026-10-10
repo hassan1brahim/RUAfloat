@@ -3,7 +3,7 @@ import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import type { App, Feature, Pt } from "../../core/app";
 import { $, esc, fmtFt, getJson, postJson } from "../../core/util";
 import { announce } from "../../lib/speech";
-import { bestPosition, circle, type Fix } from "../../lib/locate";
+import { bestPosition, circle, locateError, type Fix } from "../../lib/locate";
 import { DRY_MARGIN_DM, type Place, type Plan } from "../../lib/route";
 import { onSpeak, speak, stopSpeaking } from "../../lib/speech";
 import { NO_OBSERVATIONS } from "../roads";
@@ -193,7 +193,7 @@ const feature: Feature = {
       if (!navigator.geolocation) return askForPlace("This browser can't share its location. Choose where you are:");
       app.hint("Finding your location…");
       void bestPosition({ onProgress: (f) => app.hint(`Finding your location… within ${Math.round(f.accuracy)} m`) }).then((f) => {
-        if (!f) return askForPlace("Couldn't get your location. Choose where you are:");
+        if (!f) return askForPlace(locateError || "Couldn't get your location. Choose where you are:");
         if (app.get("grid").cellAt(f.lon, f.lat) < 0) return askForPlace("You're outside the area this app covers. Choose where you are on campus:");
         setFromFix(f);
         void run();
@@ -220,8 +220,8 @@ const feature: Feature = {
       } else {
         void speak(pos
           ? "You are outside the area this app covers, which is Rutgers New Brunswick. Choose a place on campus. If you are in danger, call 9 1 1."
-          : "I could not get your location. Choose the building you are in, then press Route from this place. If you are in danger, call 9 1 1.");
-        return askForPlace(pos ? "You're outside the area this app covers. Choose where you are on campus:" : "Couldn't get your location. Choose where you are:");
+          : `${locateError || "I could not get your location."} If you are in danger, call 9 1 1.`);
+        return askForPlace(pos ? "You're outside the area this app covers. Choose where you are on campus:" : locateError || "Couldn't get your location. Choose where you are:");
       }
       await run();
     }
