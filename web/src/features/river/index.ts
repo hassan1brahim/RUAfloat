@@ -30,18 +30,38 @@ const PRESETS = [
 
 let ida: Ida, live: Live | null = null, idaIdx = 0, playing = 0, app: App;
 
+type Tab = "ida" | "manual";
+let tab: Tab = "ida";
+
 function setMode(m: Mode) {
   app.state.mode = m;
-  if (playing) togglePlay();
-  document.querySelectorAll<HTMLButtonElement>("#mode-seg button").forEach((b) => { b.classList.toggle("on", b.dataset.mode === m); b.setAttribute("aria-pressed", String(b.dataset.mode === m)); });
-  $("ida-ctl").hidden = m !== "ida";
-  $("whatif-ctl").hidden = m !== "whatif";
-  const pill = $("mode-pill");
-  pill.className = `pill ${m === "live" ? "live" : m === "ida" ? "replay" : "whatif"}`;
-  pill.textContent = m === "live" ? "LIVE" : m === "ida" ? "REPLAY · IDA 2021" : "WHAT-IF";
+  if (playing && m !== "ida") togglePlay();
+  if (m === "ida") tab = "ida";
+  else if (m === "whatif" && tab === "ida") tab = "manual";
+  syncUi();
   if (m === "live") applyLive();
   if (m === "ida") { if (!idaIdx) idaIdx = ida.series.findIndex((p) => p[0] >= "2021-09-02T06"); applyIda(); }
   if (m === "whatif") app.setStage(+$<HTMLInputElement>("stage-slider").value);
+}
+
+function setTab(t: Tab) {
+  tab = t;
+  setMode(t === "ida" ? "ida" : "whatif");
+}
+
+function syncUi() {
+  const m = app.state.mode;
+  document.querySelectorAll<HTMLButtonElement>("#mode-seg button").forEach((b) => {
+    const on = (b.dataset.m === "live") === (m === "live");
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+  });
+  $("whatif-bar").hidden = m === "live";
+  const pill = $("mode-pill");
+  pill.hidden = m !== "live";   // only the live indicator sits under the title; what-if shows in its own bar
+  document.querySelectorAll<HTMLButtonElement>("#wi-tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+  $("ida-ctl").hidden = tab !== "ida";
+  $("whatif-ctl").hidden = tab !== "manual";
+  app.map?.resize();
 }
 
 function togglePlay() {
@@ -106,24 +126,35 @@ const feature: Feature = {
     app = a;
     ida = await getJson<Ida>("/data/ida.json");
     const head = document.createElement("span");
-    head.innerHTML = `<span id="mode-pill" class="pill live">LIVE</span> <span id="top-stage" class="mono">--.- ft</span> <span id="top-cat" class="cat">--</span> <span id="top-time" class="muted mono"></span>`;
+    head.innerHTML = `<span id="top-time" class="muted mono"></span><span id="top-stage" class="mono">--.- ft</span> <span id="top-cat" class="cat">--</span>`;
     head.className = "top-river";
-    app.headerItem(head);
+    app.headerNow(head);
+    const pill = document.createElement("span");
+    pill.id = "mode-pill";
+    pill.className = "pill live";
+    pill.textContent = "LIVE";
+    app.heroStatus(pill);
     setInterval(() => ($("top-time").textContent = et(new Date().toISOString()) + " ET"), 1000);
 
-    app.card({ col: "left", id: "scenario-card", title: "Scenario", order: 10, html: `
-      <div class="seg" id="mode-seg" role="group" aria-label="Scenario">
-        <button data-mode="live" class="on" aria-pressed="true">Live</button><button data-mode="ida" aria-pressed="false">Ida 2021 replay</button><button data-mode="whatif" aria-pressed="false">What-if</button>
+    const modeCtl = document.createElement("div");
+    modeCtl.className = "mode-float";
+    // Admin only for now: students see the live river. A demo link (?scenario=ida) still opens the replay bar, with Back to Live.
+    modeCtl.dataset.views = "admin";
+    modeCtl.innerHTML = `<div class="seg2" id="mode-seg" role="group" aria-label="River data"><button data-m="live">● LIVE</button><button data-m="whatif">WHAT-IF ▾</button></div>`;
+    app.mapOverlay(modeCtl);
+    $("whatif-bar").innerHTML = `
+      <span class="tag">WHAT-IF</span>
+      <div class="seg" id="wi-tabs"><button data-tab="ida">Ida 2021 replay</button><button data-tab="manual">Manual</button></div>
+      <div class="wi-pane" id="ida-ctl" hidden>
+        <button id="ida-play" class="btn small">▶ Play</button><input id="ida-scrub" type="range" min="0" max="0" value="0" aria-label="Ida replay hour" />
+        <span class="small" id="ida-label"></span>
       </div>
-      <div id="ida-ctl" class="ctl" hidden>
-        <div class="row"><button id="ida-play" class="btn small"><span aria-hidden="true">▶</span> Play</button><input id="ida-scrub" type="range" min="0" max="0" value="0" aria-label="Ida replay hour" /></div>
-        <div class="muted small" id="ida-label"></div>
-      </div>
-      <div id="whatif-ctl" class="ctl" hidden>
+      <div class="wi-pane" id="whatif-ctl" hidden>
         <label class="small muted" for="stage-slider">Bound Brook river stage</label>
-        <div class="row"><input id="stage-slider" type="range" min="15" max="45" step="0.1" value="30" /><span id="stage-val" class="mono">30.0 ft</span></div>
-        <div class="chips" id="presets"></div>
-      </div>` });
+        <input id="stage-slider" type="range" min="15" max="45" step="0.1" value="30" /><span id="stage-val" class="mono">30.0 ft</span>
+        <div class="chips" id="presets" style="margin:0"></div>
+      </div>
+      <button id="wi-live" class="btn small" style="margin-left:auto;border-color:#16a34a;color:#86efac">Back to Live</button>`;
     app.card({ col: "left", id: "gauge-card", title: "Raritan River at Bound Brook", order: 20,
       extraTitle: ` <a class="src" href="https://water.noaa.gov/gauges/bdkn4" target="_blank" rel="noopener">NWS ↗</a>`, html: `
       <div class="gauge">
@@ -136,24 +167,27 @@ const feature: Feature = {
     app.card({ col: "left", id: "alerts-card", title: "NWS alerts · New Brunswick", order: 70,
       extraTitle: ` <a class="src" href="https://www.weather.gov/phi/" target="_blank" rel="noopener">Mt Holly ↗</a>`, html: `<ul class="alerts" id="alerts"><li class="muted">Loading…</li></ul>` });
 
-    document.querySelectorAll<HTMLButtonElement>("#mode-seg button").forEach((b) => (b.onclick = () => setMode(b.dataset.mode as Mode)));
+    document.querySelectorAll<HTMLButtonElement>("#mode-seg button").forEach((b) => (b.onclick = () => (b.dataset.m === "live" ? setMode("live") : setTab(tab))));
+    document.querySelectorAll<HTMLButtonElement>("#wi-tabs button").forEach((b) => (b.onclick = () => setTab(b.dataset.tab as Tab)));
+    $("wi-live").onclick = () => setMode("live");
     const scrub = $<HTMLInputElement>("ida-scrub");
     scrub.max = String(ida.series.length - 1);
     scrub.oninput = () => { idaIdx = +scrub.value; applyIda(); };
     $("ida-play").onclick = togglePlay;
     const slider = $<HTMLInputElement>("stage-slider");
-    slider.oninput = () => app.setStage(+slider.value);
+    slider.oninput = () => { tab = "manual"; app.setStage(+slider.value); };
     for (const p of PRESETS) {
       const c = document.createElement("button");
       c.className = "chip"; c.textContent = p.label;
-      c.onclick = () => { slider.value = String(p.ft); app.setStage(p.ft); };
+      c.onclick = () => { slider.value = String(p.ft); tab = "manual"; app.setStage(p.ft); };
       $("presets").append(c);
     }
     app.provide("river", {
       ida, live: () => live, idaIndex: () => idaIdx,
       setIdaIndex: (i) => { idaIdx = i; if (app.state.mode === "ida") applyIda(); },
-      setMode, setWhatIf: (ft) => { slider.value = String(ft); if (app.state.mode === "whatif") app.setStage(ft); },
+      setMode, setWhatIf: (ft) => { slider.value = String(ft); tab = "manual"; if (app.state.mode === "whatif") app.setStage(ft); },
     });
+    syncUi();
     await refreshLive();
     setInterval(() => app.state.mode === "live" && refreshLive(), 60_000);
   },

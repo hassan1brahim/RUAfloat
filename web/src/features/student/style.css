@@ -1,0 +1,20 @@
+#now-body { font-size: 12px; line-height: 1.4; }
+#now-body b { color: #86efac; font-size: 13px; }
+#now-body.bad b { color: #fca5a5; }
+#now-body .now-ml { color: #fdba74; font-size: 11px; }
+#access-card { border-color: #a16207; }
+#access-card h2 { color: #fde047; }
+.a11y-size { grid-template-columns: repeat(3, 1fr); margin-top: 4px; }
+.a11y-voice { width: 100%; margin-top: 12px; padding: 12px; background: #ffe14d; border-color: #ffe14d; color: #000; font-size: 14px; }
+.a11y-voice.on { background: #000; border-color: #ffe14d; color: #ffe14d; }
+.a11y-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.a11y-opt { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.a11y-opt > span:first-child { display: flex; flex-direction: column; gap: 1px; }
+.a11y-opt b { font-size: 13px; }
+.a11y-opt .switch { flex: none; width: 36px; height: 20px; border-radius: 10px; background: #1f2b38; border: 1px solid #2f4256; position: relative; }
+.a11y-opt .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #8696a7; transition: left .15s; }
+.a11y-opt.on { background: #0c2530; border-color: #0e7490; }
+.a11y-opt.on .switch { background: #0e7490; border-color: #22d3ee; }
+.a11y-opt.on .switch::after { left: 18px; background: #fff; }
+.a11y-keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; margin-top: 6px; font-size: 12px; }
+.a11y-keys .chip { cursor: default; text-align: center; }

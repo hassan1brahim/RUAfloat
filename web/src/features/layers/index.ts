@@ -10,8 +10,8 @@ const feature: Feature = {
     m.addLayer({ id: "satellite", type: "raster", source: "sat", paint: { "raster-opacity": 0.85 } }, firstSymbol);
     m.addSource("fema", { type: "geojson", data: "/data/fema.json", attribution: "Flood zones: FEMA NFHL" });
     m.addLayer({ id: "fema", type: "fill", source: "fema", paint: { "fill-color": ["match", ["get", "cls"], "100yr", "#f59e0b", "#a78bfa"], "fill-opacity": 0.22 } }, "buildings");
-    app.toggle("FEMA flood zones", ["fema"], false);
-    app.toggle("Satellite", ["satellite"], false);
+    app.toggle("FEMA flood zones", ["fema"], false, "Flooding", { views: "admin" });
+    app.toggle("Satellite", ["satellite"], false, "Base map", { views: "admin" });
   },
 };
 export default feature;
