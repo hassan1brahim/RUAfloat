@@ -1,0 +1,227 @@
+[
+{
+"name": "City of New Brunswick Police Station",
+"kind": "police",
+"lon": -74.4462213,
+"lat": 40.4933883,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "River Road Fire House",
+"kind": "fire",
+"lon": -74.4980236,
+"lat": 40.5397969,
+"campus": null,
+"block": 134,
+"hand": 131
+},
+{
+"name": "Piscataway Police Station",
+"kind": "police",
+"lon": -74.4696728,
+"lat": 40.5395712,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "Busch Student Center",
+"kind": "gather",
+"lon": -74.4587739,
+"lat": 40.5233409,
+"campus": "Busch",
+"block": 65535,
+"hand": 65535,
+"capacity": 1350,
+"capacity_from": "Busch Student Center BSC (54,862 assignable ft\u00b2 / 40)"
+},
+{
+"name": "Cook Student Center",
+"kind": "gather",
+"lon": -74.4313112,
+"lat": 40.4791294,
+"campus": "Cook",
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "Cook-Douglass Recreation Center",
+"kind": "gather",
+"lon": -74.4326704,
+"lat": 40.4785548,
+"campus": "Cook",
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "Douglass Student Center",
+"kind": "gather",
+"lon": -74.4366434,
+"lat": 40.4846978,
+"campus": "Douglass",
+"block": 65535,
+"hand": 65535,
+"capacity": 900,
+"capacity_from": "Douglass Student Center (37,975 assignable ft\u00b2 / 40)"
+},
+{
+"name": "Livingston Recreation Center",
+"kind": "gather",
+"lon": -74.4309003,
+"lat": 40.521115,
+"campus": "Livingston",
+"block": 65535,
+"hand": 65535,
+"capacity": 850,
+"capacity_from": "Livingston Recreation Center (34,781 assignable ft\u00b2 / 40)"
+},
+{
+"name": "Livingston Student Center",
+"kind": "gather",
+"lon": -74.4372106,
+"lat": 40.5235656,
+"campus": "Livingston",
+"block": 65535,
+"hand": 65535,
+"capacity": 900,
+"capacity_from": "Livingston Student Center LSC (36,329 assignable ft\u00b2 / 40)"
+},
+{
+"name": "Jersey Mike's Arena",
+"kind": "gather",
+"lon": -74.4413111,
+"lat": 40.5252416,
+"campus": "Livingston",
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "College Avenue Student Center",
+"kind": "gather",
+"lon": -74.4521745,
+"lat": 40.5026368,
+"campus": "College Ave",
+"block": 65535,
+"hand": 65535,
+"capacity": 1400,
+"capacity_from": "College Avenue Student Center CASC (57,058 assignable ft\u00b2 / 40)"
+},
+{
+"name": "Robert Wood Johnson University Hospital",
+"kind": "hospital",
+"lon": -74.4495108,
+"lat": 40.4952979,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "Sonny A. Werblin Recreation Center",
+"kind": "gather",
+"lon": -74.4608282,
+"lat": 40.5196233,
+"campus": "Busch",
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "Rutgers Health - University Behavioral Health Care",
+"kind": "hospital",
+"lon": -74.4702583,
+"lat": 40.5256363,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "North Stelton Volunteer Fire Company",
+"kind": "fire",
+"lon": -74.4255534,
+"lat": 40.5418059,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "Saint Peter's University Hospital",
+"kind": "hospital",
+"lon": -74.4594858,
+"lat": 40.5006112,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "Highland Park Police Station",
+"kind": "police",
+"lon": -74.4226178,
+"lat": 40.4970187,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "New Brunswick Fire Department Engine Company 5",
+"kind": "fire",
+"lon": -74.4542662,
+"lat": 40.5006499,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "East Franklin Fire Co",
+"kind": "fire",
+"lon": -74.4706153,
+"lat": 40.4997179,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "The Bristol-Meyers Squibb Children's Hospital",
+"kind": "hospital",
+"lon": -74.4509219,
+"lat": 40.4949127,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "Community Volunteer Fire Co",
+"kind": "fire",
+"lon": -74.4726012,
+"lat": 40.4911577,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "Raritan Engine Company Number 4",
+"kind": "fire",
+"lon": -74.4450259,
+"lat": 40.4877308,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "Middlesex County Sheriff's Office",
+"kind": "police",
+"lon": -74.462255,
+"lat": 40.4763119,
+"campus": null,
+"block": 65535,
+"hand": 65535
+},
+{
+"name": "NB Fire Dept Engine Co. 5",
+"kind": "fire",
+"lon": -74.454304,
+"lat": 40.50067,
+"block": 65535,
+"hand": 65535
+}
+]

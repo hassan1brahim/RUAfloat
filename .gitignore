@@ -5,3 +5,6 @@ node_modules/
 data/store/
 *.log
 *.tsbuildinfo
+data/live/
+hardware/**/secrets.h
+web/dist/

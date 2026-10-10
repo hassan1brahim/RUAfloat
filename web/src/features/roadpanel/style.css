@@ -1,0 +1,6 @@
+.road-panel dl { margin: 6px 0 0; display: grid; grid-template-columns: 1fr; gap: 2px; }
+.road-panel dt { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .6px; margin-top: 6px; }
+.road-panel dd { margin: 0; }
+.maplibregl-popup { max-width: 340px !important; }
+.maplibregl-popup-content { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font-size: 12px; }
+.maplibregl-popup-tip { display: none; }
