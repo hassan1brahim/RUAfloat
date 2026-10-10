@@ -64,6 +64,12 @@ function syncUi() {
   app.map?.resize();
 }
 
+/** The time beside the level: now when live, the replay hour during Ida, none for a made-up level. */
+function stampTop() {
+  const m = app.state.mode;
+  $("top-time").textContent = m === "live" ? `${et(new Date().toISOString())} ET` : m === "ida" ? `Ida · ${et(ida.series[idaIdx][0])} ET` : "What-if level";
+}
+
 function togglePlay() {
   if (playing) { clearInterval(playing); playing = 0; $("ida-play").innerHTML = `<span aria-hidden="true">▶</span> Play`; return; }
   if (idaIdx >= ida.series.length - 1) idaIdx = 0;
@@ -134,7 +140,7 @@ const feature: Feature = {
     pill.className = "pill live";
     pill.textContent = "LIVE";
     app.heroStatus(pill);
-    setInterval(() => ($("top-time").textContent = et(new Date().toISOString()) + " ET"), 1000);
+    setInterval(stampTop, 1000);
 
     const modeCtl = document.createElement("div");
     modeCtl.className = "mode-float";
@@ -192,6 +198,11 @@ const feature: Feature = {
     setInterval(() => app.state.mode === "live" && refreshLive(), 60_000);
   },
   update(a) {
+    stampTop();
+    // screen readers read these instead of "34 of 63"
+    const c = catOf(a.state.stageFt), catText = c === "normal" ? "no flooding" : `${c} flooding`;
+    $("ida-scrub").setAttribute("aria-valuetext", `${et(ida.series[idaIdx][0])} ET, river ${ida.series[idaIdx][1].toFixed(1)} feet, ${catText}`);
+    $("stage-slider").setAttribute("aria-valuetext", `${a.state.stageFt.toFixed(1)} feet at Bound Brook, ${catText}`);
     const ft = a.state.stageFt, rise = a.rise(), cat = catOf(ft);
     for (const id of ["top-cat", "g-cat"]) { const el = $(id); el.className = `cat ${cat}`; el.textContent = cat === "normal" ? "no flooding" : `${cat} flood`; }
     $("top-stage").textContent = fmtFt(ft);

@@ -70,8 +70,8 @@ const feature: Feature = {
       <div class="row"><input id="place-q" type="search" placeholder="e.g. LSM, Hill Center, Scott Hall" autocomplete="off" /></div>
       <div id="place-n" class="sr-only" role="status"></div>
       <ul id="place-results" class="place-results" aria-label="Search results"></ul>
-      <div class="row gap"><button id="btn-locate" class="btn ghost small"><span aria-hidden="true">◎</span> My location</button><button id="btn-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button></div>
-      <div class="row gap"><button id="btn-guide" class="btn primary"><span aria-hidden="true">🔊</span> Find my route</button></div>
+      <div class="row gap"><button id="btn-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button></div>
+      <div class="row gap"><button id="btn-guide" class="btn primary"><span aria-hidden="true">🔊</span> Route from this place</button></div>
       <div id="guide-out" class="guide-out" hidden>
         <div class="dest" id="g-dest" tabindex="-1"></div><blockquote id="g-script"></blockquote>
         <div class="row gap small"><button id="btn-replay" class="btn ghost small"><span aria-hidden="true">↻</span> Play again</button><span id="g-voice" class="muted"></span></div>
@@ -105,14 +105,6 @@ const feature: Feature = {
     $("g-prev").onclick = () => showStep(stepIdx - 1);
     $("g-next").onclick = () => showStep(stepIdx + 1, true);
     $("g-all").onclick = () => { showAll = !showAll; renderSteps(); };
-    $("btn-locate").onclick = () => navigator.geolocation?.getCurrentPosition(
-      (p) => {
-        setStart({ name: "Your location", lon: p.coords.longitude, lat: p.coords.latitude });
-        // Laptops have no GPS and guess from Wi-Fi: say how far off it may be, so a wrong guess is obvious.
-        app.hint(`From: Your location (accurate to about ${Math.round(p.coords.accuracy)} m) · wrong? Pick on map`);
-      },
-      () => app.hint("Location unavailable: pick on the map instead"),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 
     // Search: the same 324-building index the voice agent uses. Results are plain buttons a screen reader can read.
     const q = $<HTMLInputElement>("place-q"), results = $("place-results");
@@ -132,7 +124,7 @@ const feature: Feature = {
           const x = m[+b.dataset.i!];
           setStart({ name: x.name, lon: x.lon, lat: x.lat });
           results.innerHTML = ""; q.value = "";
-          announce(`Starting point: ${x.name}. Press Find my route.`);
+          announce(`Starting point: ${x.name}. Press Route from this place.`);
           $("btn-guide").focus();
         };
         $("place-n").textContent = r.error ? "Search unavailable." : m.length ? `${m.length} result${m.length > 1 ? "s" : ""}${r.note ? `. ${r.note}` : ""}` : "No matches in the area this app covers.";
@@ -240,7 +232,7 @@ const feature: Feature = {
         `<span class="badge">${scenario}</span>`,
       ].join("");
       lastScript = res.script;
-      btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Find my route`;
+      btn.disabled = false; btn.innerHTML = `<span aria-hidden="true">🔊</span> Route from this place`;
       if (!silent) void speak(res.script);
       return { script: res.script, plan: p };
     }

@@ -30,7 +30,7 @@ const feature: Feature = {
       <div class="small muted" style="margin-top:12px">Keyboard</div>
       <div class="a11y-keys">
         <span class="chip mono">V</span><span>Turn voice mode on or off</span>
-        <span class="chip mono">G</span><span>Find my route (voice mode)</span>
+        <span class="chip mono">G</span><span>Route me to safety (voice mode)</span>
         <span class="chip mono">N</span><span>Next direction (voice mode)</span>
         <span class="chip mono">R</span><span>Repeat the last thing said</span>
         <span class="chip mono">Esc</span><span>Stop talking (voice mode stays on)</span>
