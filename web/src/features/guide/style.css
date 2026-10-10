@@ -35,3 +35,12 @@ body[data-view="student"] .col #guide-card h2 { font-size: 16px; font-weight: 80
 .dest-btn { width: 100%; text-align: left; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; font: 13px Inter, sans-serif; }
 .dest-btn span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .dest-btn.on { border-color: var(--water); }
+/* Read aloud: an on/off switch */
+.read-toggle { display: inline-flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: 600 13px Inter, sans-serif; cursor: pointer; }
+.read-toggle .rt-track { position: relative; width: 36px; height: 20px; border-radius: 10px; background: #1f2b38; border: 1px solid #2f4256; transition: background .15s; }
+.read-toggle .rt-knob { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #8696a7; transition: left .15s, background .15s; }
+.read-toggle .rt-state { font: 700 11px var(--mono); min-width: 26px; color: var(--muted); }
+.read-toggle.on { border-color: #22d3ee; background: #0c2530; }
+.read-toggle.on .rt-track { background: #0e7490; border-color: #22d3ee; }
+.read-toggle.on .rt-knob { left: 18px; background: #fff; }
+.read-toggle.on .rt-state { color: #67e8f9; }
