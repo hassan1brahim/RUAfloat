@@ -6,7 +6,8 @@ import type { Evidence } from "../roads";
 
 export type ReportAI = { usable?: boolean; water_on_ground?: boolean; depth_cm?: [number, number] | null; depth_reference?: string;
   looks_like_flood?: boolean; concerns?: string | null; confidence?: number; error?: string };
-export type Report = { id: string; time: string; lat: number; lon: number; note: string; hash?: string; ai: ReportAI; model: string };
+export type Report = { id: string; time: string; lat: number; lon: number; note: string; hash?: string; ai: ReportAI; model: string;
+  review?: { verdict: "confirmed" | "rejected"; at: string } };
 export type Sensor = { id: string; name: string; road: string; lat: number; lon: number; mount_cm: number;
   reading: { time: string; depth_cm: number } | null; history: { time: string; depth_cm: number }[]; stale: boolean; status: string };
 export type Camera = { id: string; name: string; lid: string; lat: number; lon: number; image: string | null; time: string | null;
@@ -32,6 +33,7 @@ const CORROBORATE_M = 150;
  * either the model also predicts water there or another recent report within 150 m agrees.
  */
 export function reportStatus(r: Report, all: Report[], grid: FloodGrid, riseDm: number): ReportStatus {
+  if (r.review) return { status: r.review.verdict, why: `${r.review.verdict} by admin` };   // a person's decision beats the rules
   const ai = r.ai;
   if (ai.error || ai.usable === false) return { status: "rejected", why: ai.error ? "photo check failed" : `photo not usable${ai.concerns ? ` (${ai.concerns})` : ""}` };
   if (!ai.water_on_ground) return { status: "rejected", why: "no water visible in the photo" };

@@ -28,7 +28,7 @@ const feature: Feature = {
     app.card({ col: "left", id: "cams-card", title: "River cameras · AI check", order: 40,
       extraTitle: ` <a class="src" href="https://apps.usgs.gov/hivis/" target="_blank" rel="noopener">USGS HIVIS ↗</a>`, html: `<div id="cams" class="cams"><div class="muted small">Loading cameras…</div></div>` });
     app.card({ col: "left", id: "sensors-card", title: "Street sensors", order: 50, html: `<div id="sensors" class="small"><div class="muted">Loading…</div></div>` });
-    app.card({ col: "right", student: "left", studentOrder: 20, id: "report-card", title: "Report flooding", order: 30, html: `
+    app.card({ student: "left", studentOrder: 20, id: "report-card", title: "Report flooding", order: 30, html: `
       <div class="small muted" id="r-loc">Location: use “📍 Pick on map” below or your GPS.</div>
       <div class="row gap"><button id="r-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button><button id="r-gps" class="btn ghost small"><span aria-hidden="true">◎</span> GPS</button></div>
       <input id="r-photo" type="file" accept="image/*" capture="environment" aria-label="Photo of the flooding" />
@@ -132,17 +132,18 @@ function popupHtml(p: { kind: string; id: string }) {
     <b>${st?.status ?? "?"}</b>: ${esc(st?.why)}`;
 }
 
+/** One health line per sensor; the depth sparkline only once there is something to draw. */
 function renderSensors() {
   const el = $("sensors");
   if (!sensors.length) { el.innerHTML = `<div class="muted">No sensors configured.</div>`; return; }
   el.innerHTML = sensors.map((s) => {
     const d = s.reading?.depth_cm, fresh = !!s.reading && !s.stale;
+    const [state, cls] = !s.reading ? ["offline: never reported", "muted"] : !fresh ? [`offline since ${et(s.reading.time)}`, "warn"]
+      : d! >= 30 ? [`${d} cm · closed to walking and cars`, "bad"] : d! >= 15 ? [`${d} cm · closed to walking`, "bad"] : d! > 0 ? [`${d} cm · caution`, "warn"] : ["dry", "ok"];
     const h = s.history.slice(-40), max = Math.max(40, ...h.map((x) => x.depth_cm));
     const pts = h.map((x, i) => `${((i / Math.max(1, h.length - 1)) * 120).toFixed(1)},${(30 - (x.depth_cm / max) * 28).toFixed(1)}`).join(" ");
-    return `<div class="sensor-row"><div><b>${s.name}</b><br><span class="muted">${s.reading ? `${fresh ? "" : "stale · "}${et(s.reading.time)}` : "no readings yet"}</span></div>
-      <svg width="120" height="32" viewBox="0 0 120 32" aria-hidden="true"><line x1="0" x2="120" y1="${30 - (15 / max) * 28}" y2="${30 - (15 / max) * 28}" stroke="#ef4444" stroke-dasharray="3 3" stroke-opacity=".6"/><polyline points="${pts}" fill="none" stroke="#38bdf8" stroke-width="2"/></svg>
-      <b class="big2">${d ?? "--"}<span class="muted small"> cm</span></b></div>
-      <div class="muted">${d != null && fresh ? (d >= 15 ? `≥ 15 cm: closed to walking${d >= 30 ? " and vehicles" : ""} (observed)` : d > 0 ? "Shallow: caution" : "Dry") : "Not reporting: no effect on routing"}</div>`;
+    return `<div class="sensor-row"><div><b>${esc(s.name)}</b><br><span class="${cls}">${state}</span></div>
+      ${h.length > 1 ? `<svg width="120" height="32" viewBox="0 0 120 32" aria-hidden="true"><line x1="0" x2="120" y1="${30 - (15 / max) * 28}" y2="${30 - (15 / max) * 28}" stroke="#ef4444" stroke-dasharray="3 3" stroke-opacity=".6"/><polyline points="${pts}" fill="none" stroke="#38bdf8" stroke-width="2"/></svg>` : ""}</div>`;
   }).join("");
 }
 
