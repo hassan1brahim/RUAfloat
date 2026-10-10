@@ -8,8 +8,7 @@ const feature: Feature = {
   init() {},
   async ready(app) {
     const q = app.params, river = app.get("river");
-    // Students follow the admin's drill, so a link only sets the scenario in the Admin view.
-    const sc = app.state.view === "admin" ? (q.get("scenario") as Mode | null) : null;
+    const sc = q.get("scenario") as Mode | null;
     if (sc === "ida") {
       const t = q.get("t"), s = river.ida.series;
       const i = t ? s.findIndex((p) => p[0] >= t) : s.findIndex((p) => p[0] === river.ida.crest[0].slice(0, 19) + "+00:00");
