@@ -49,7 +49,8 @@ export function roadTimeline(roads, stageFt, outlook, sensors = [], top = 10) {
   for (const e of roads.edges) {
     const name = roads.names[e[4]];
     if (!name || GENERIC.test(name)) continue;
-    const r = byName.get(name) ?? { name, walk: NEVER, vehicles: NEVER, meters: 0 };
+    const r = byName.get(name) ?? { name, walk: NEVER, vehicles: NEVER, meters: 0, at: null };
+    if (e[3] < r.walk && roads.nodes) r.at = [roads.nodes[2 * e[0]], roads.nodes[2 * e[0] + 1]];   // where the road floods first; nodes are flat lon,lat pairs
     r.walk = Math.min(r.walk, e[3]);
     r.vehicles = Math.min(r.vehicles, e[7]);
     if (e[3] <= rise) r.meters += e[2];
@@ -60,7 +61,7 @@ export function roadTimeline(roads, stageFt, outlook, sensors = [], top = 10) {
     const walkFt = stageAt(r.walk), s = observed.get(r.name);
     const closedNow = r.walk <= rise || !!s;
     return {
-      name: r.name, closes_walking_ft: walkFt, closes_vehicles_ft: stageAt(r.vehicles), margin_ft: +(walkFt - stageFt).toFixed(1),
+      name: r.name, lon: r.at?.[0] ?? null, lat: r.at?.[1] ?? null, closes_walking_ft: walkFt, closes_vehicles_ft: stageAt(r.vehicles), margin_ft: +(walkFt - stageFt).toFixed(1),
       status: closedNow ? "closed" : firstReach(outlook, walkFt) ? "closing" : "open",
       closes_at: closedNow ? null : firstReach(outlook, walkFt),
       closed_m: Math.round(r.meters), observed: s ? `${s.name}: ${s.reading.depth_cm} cm` : null,
@@ -75,7 +76,7 @@ export function roadTimeline(roads, stageFt, outlook, sensors = [], top = 10) {
 }
 
 /** What changed, newest first: alerts, sensor tier changes, reports and their reviews. Always real time, never a scenario. */
-export function feed({ alerts = [], sensors = [], reports = [], forecastPeak = null }, limit = 15) {
+export function feed({ alerts = [], sensors = [], reports = [], dispatches = [], forecastPeak = null }, limit = 15) {
   const ev = [];
   for (const a of alerts) ev.push({ time: a.onset ?? null, kind: "alert", level: /Severe|Extreme/.test(a.severity) ? "bad" : "warn", text: `NWS: ${a.event}` });
   for (const s of sensors) {
@@ -94,6 +95,9 @@ export function feed({ alerts = [], sensors = [], reports = [], forecastPeak = n
       text: `Photo report: ${ai.error ? "photo check failed" : ai.water_on_ground ? `water${dc ? `, ${dc[0]}–${dc[1]} cm` : ""}` : "no water seen"}`, report: r.id });
     if (r.review) ev.push({ time: r.review.at, kind: "review", level: r.review.verdict === "confirmed" ? "bad" : "ok", text: `Report ${r.review.verdict} by admin`, report: r.id });
   }
+  for (const d of dispatches) for (const h of d.history)
+    ev.push({ time: h.at, kind: "dispatch", level: h.status === "pending" ? "warn" : "ok",
+      text: h.status === "pending" ? `Dispatch: ${d.unit} sent to ${d.target}` : `Dispatch: ${d.unit} ${h.status.replace("-", " ")} at ${d.target}` });
   if (forecastPeak) ev.push({ time: forecastPeak.issued, kind: "forecast", level: forecastPeak.ft >= 28 ? "warn" : "ok", text: `NWS forecast peak ${forecastPeak.ft} ft at Bound Brook` });
   return ev.filter((e) => e.time).sort((a, b) => Date.parse(b.time) - Date.parse(a.time)).slice(0, limit);
 }
