@@ -1,0 +1,11 @@
+{
+  "name": "hackru-26",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "server": "node server/index.mjs",
+    "sensor:sim": "node hardware/sim_sensor.mjs",
+    "test": "node --test test/"
+  }
+}
