@@ -24,9 +24,9 @@ function interp(pairs: [number, number][], t: number): number | null {
 }
 
 /**
- * Hourly timeline: our ML model for 0–12 h (it beats "the level stays the same" there, and we measured its error),
- * then the official NWS forecast out to `hours`. Errors are the model's held-out high-water errors; past 12 h the
- * NWS publishes no error, so the 12 h error is carried forward and labelled as an assumption in the UI.
+ * Hourly timeline: our ML model for 0–18 h (it beats "the level stays the same" there, and we measured its error),
+ * then the official NWS forecast out to `hours`. Errors are the model's held-out high-water errors; past 18 h the
+ * NWS publishes no error, so the 18 h error is carried forward and labelled as an assumption in the UI.
  */
 export function buildTimeline(o: {
   start: number; nowFt: number; ml: { h: number; ft: number }[]; err: Record<number, number>;
@@ -79,7 +79,7 @@ export function firstReach(series: [string, number][], ft: number): number | nul
 export type IdaHour = { t: string; now: number; pred: Record<string, number>; actual: Record<string, number | null> };
 
 /**
- * How early our model would have warned during Ida: the first hour at which any of its forecasts (3/6/12 h)
+ * How early our model would have warned during Ida: the first hour at which any of its forecasts (3/6/12/18 h)
  * reached the item's closing level, before the river actually got there. Lead time = actual closing - warning.
  */
 export function idaWarning(hours: IdaHour[], series: [string, number][], closeFt: number) {

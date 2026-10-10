@@ -1,0 +1,223 @@
+{
+  "about": "Places that have flooded in heavy rain (not river flooding), from news and Rutgers reports. Positions come from the app's road graph (intersections named in the reports) or OpenStreetMap. Rain thresholds are estimates, not calibrated per street.",
+  "thresholds": {
+    "watch": {
+      "rain_1h_in": 0.5,
+      "forecast_6h_in": 1.0
+    },
+    "warning": {
+      "rain_1h_in": 1.0,
+      "rain_3h_in": 1.5,
+      "rain_12h_in": 3.0
+    },
+    "note": "Estimated from NWS flash-flood guidance typical for urban central New Jersey (about 1 to 1.5 inches in an hour). After more than 3 inches in 12 hours, streets are treated as still flooded or draining (in Ida, roads stayed closed into the next morning). Not calibrated to each street."
+  },
+  "spots": [
+    {
+      "id": "joyce-kilmer",
+      "name": "Joyce Kilmer Avenue (Elizabeth St to Charles St)",
+      "area": "New Brunswick",
+      "lon": -74.4615,
+      "lat": 40.47954,
+      "radius_m": 140,
+      "roads": [
+        "Joyce Kilmer Avenue"
+      ],
+      "why": "Neighbors blame storm drains that don't keep up; a fast downpour floods the street within minutes.",
+      "events": [
+        {
+          "date": "2012-08-10",
+          "what": "Four cars submerged within minutes; water hip-deep; basement apartments evacuated.",
+          "source": "CBS New York",
+          "url": "https://cbsnews.com/newyork/news/wicked-storm-turns-section-of-new-brunswick-n-j-into-waterworld"
+        },
+        {
+          "date": "2020-07-10",
+          "what": "Closed between Loretto and Charles Streets.",
+          "source": "Patch",
+          "url": "https://patch.com/new-jersey/newbrunswick/avoid-these-flooded-new-brunswick-middlesex-boro-roads"
+        },
+        {
+          "date": "2021-09-01",
+          "what": "Closed from Loretto St to Elizabeth St (Ida).",
+          "source": "Patch",
+          "url": "https://patch.com/new-jersey/newbrunswick/dozens-roads-flooded-new-brunswick-middlesex-borough"
+        }
+      ]
+    },
+    {
+      "id": "jersey-ave",
+      "name": "Jersey Avenue (Van Dyke Ave to Tailer Square)",
+      "area": "New Brunswick",
+      "lon": -74.4661,
+      "lat": 40.48173,
+      "radius_m": 250,
+      "roads": [
+        "Jersey Avenue"
+      ],
+      "why": "Low stretch of a main road that closes in heavy rain.",
+      "events": [
+        {
+          "date": "2020-07-10",
+          "what": "Closed between Tailer St and Van Dyke Ave.",
+          "source": "Patch",
+          "url": "https://patch.com/new-jersey/newbrunswick/avoid-these-flooded-new-brunswick-middlesex-boro-roads"
+        },
+        {
+          "date": "2021-09-01",
+          "what": "Closed from How Lane to Van Dyke Ave (Ida).",
+          "source": "Patch",
+          "url": "https://patch.com/new-jersey/newbrunswick/dozens-roads-flooded-new-brunswick-middlesex-borough"
+        }
+      ]
+    },
+    {
+      "id": "new-street-drift",
+      "name": "New Street and Drift Street (near Kirkpatrick St)",
+      "area": "New Brunswick",
+      "lon": -74.44695,
+      "lat": 40.49272,
+      "radius_m": 130,
+      "roads": [
+        "New Street",
+        "Drift Street"
+      ],
+      "why": "A short, intense downpour turned the street into a river in minutes.",
+      "events": [
+        {
+          "date": "2021-09-01",
+          "what": "New Street closed from Kirkpatrick St to Joyce Kilmer Ave (Ida).",
+          "source": "Patch",
+          "url": "https://patch.com/new-jersey/newbrunswick/dozens-roads-flooded-new-brunswick-middlesex-borough"
+        },
+        {
+          "date": "2023-07-18",
+          "what": "Flash flood: 25 Drift Street residents flooded out, a basement wall caved in; the Family Court garage across the street flooded and cars flipped.",
+          "source": "CBS New York",
+          "url": "https://www.cbsnews.com/newyork/news/residents-recount-frightening-flash-flooding-in-new-brunswick-n-j/"
+        },
+        {
+          "date": "2023-07-18",
+          "what": "Family Court building closed again because of flooding.",
+          "source": "New Brunswick Today",
+          "url": "https://newbrunswicktoday.com/2023/07/privately-developed-courthouse-closed-again-due-to-flooding-issues/"
+        }
+      ]
+    },
+    {
+      "id": "college-ave-rt18",
+      "name": "College Avenue on-ramp to Route 18 South",
+      "area": "College Avenue campus",
+      "lon": -74.44532,
+      "lat": 40.50221,
+      "radius_m": 90,
+      "roads": [],
+      "why": "Highway ramp next to College Avenue campus; closed to cars in heavy rain (not part of the walking map).",
+      "events": [
+        {
+          "date": "2020-07-10",
+          "what": "On-ramp from College Avenue to Route 18 South closed.",
+          "source": "Patch",
+          "url": "https://patch.com/new-jersey/newbrunswick/avoid-these-flooded-new-brunswick-middlesex-boro-roads"
+        },
+        {
+          "date": "2021-09-01",
+          "what": "Route 18 South ramp from College Avenue closed (Ida).",
+          "source": "Patch",
+          "url": "https://patch.com/new-jersey/newbrunswick/dozens-roads-flooded-new-brunswick-middlesex-borough"
+        }
+      ]
+    },
+    {
+      "id": "lynton",
+      "name": "Lynton Towers (Livingston campus)",
+      "area": "Livingston campus",
+      "lon": -74.4359,
+      "lat": 40.52306,
+      "radius_m": 80,
+      "roads": [],
+      "why": "Residence hall basement flooded in Ida; students were moved out.",
+      "events": [
+        {
+          "date": "2021-09-02",
+          "what": "Basement of Lynton Tower South flooded; 316 students relocated to the student center.",
+          "source": "Daily Targum",
+          "url": "https://dailytargum.com/article/2021/09/rutgers-surrounding-community-grapples-with-major-flooding-after-tropical"
+        }
+      ]
+    },
+    {
+      "id": "livingston-ave",
+      "name": "Livingston Avenue near Wellington Place",
+      "area": "New Brunswick",
+      "lon": -74.4552,
+      "lat": 40.48267,
+      "radius_m": 150,
+      "roads": [
+        "Livingston Avenue"
+      ],
+      "why": "Closed during Ida's rain.",
+      "events": [
+        {
+          "date": "2021-09-01",
+          "what": "Livingston Ave at Wellington Pl. closed (Ida).",
+          "source": "Patch",
+          "url": "https://patch.com/new-jersey/newbrunswick/dozens-roads-flooded-new-brunswick-middlesex-borough"
+        }
+      ]
+    }
+  ],
+  "ida_2021": {
+    "about": "Hourly rain at Somerset Airport (SMQ), the nearest hourly rain gauge, about 10 miles west of campus, during Ida. Each value is the rain in the hour ending at that time (UTC). From the Iowa Environmental Mesonet ASOS archive.",
+    "hourly_in": [
+      [
+        "2021-09-01T19:53:00Z",
+        0.0
+      ],
+      [
+        "2021-09-01T20:53:00Z",
+        0.04
+      ],
+      [
+        "2021-09-01T21:53:00Z",
+        0.33
+      ],
+      [
+        "2021-09-01T22:53:00Z",
+        0.0
+      ],
+      [
+        "2021-09-01T23:53:00Z",
+        2.83
+      ],
+      [
+        "2021-09-02T00:53:00Z",
+        1.32
+      ],
+      [
+        "2021-09-02T01:53:00Z",
+        0.49
+      ],
+      [
+        "2021-09-02T02:53:00Z",
+        0.35
+      ],
+      [
+        "2021-09-02T03:53:00Z",
+        0.45
+      ],
+      [
+        "2021-09-02T04:53:00Z",
+        0.07
+      ],
+      [
+        "2021-09-02T05:53:00Z",
+        0.01
+      ],
+      [
+        "2021-09-02T06:53:00Z",
+        0.0
+      ]
+    ]
+  }
+}

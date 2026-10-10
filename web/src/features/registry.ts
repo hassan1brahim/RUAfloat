@@ -9,6 +9,7 @@ import buildings from "./buildings";
 import roadpanel from "./roadpanel";
 import detection from "./detection";
 import nwm from "./nwm";
+import rain from "./rain";
 import forecast from "./forecast";
 import voice from "./voice";
 import student from "./student";
@@ -18,4 +19,4 @@ import share from "./share";
 import admin from "./admin";
 import drill from "./drill";
 
-export const FEATURES: Feature[] = [river, flood, roads, guide, layers, buildings, roadpanel, detection, nwm, forecast, voice, student, a11y, whatif, share, admin, drill];
+export const FEATURES: Feature[] = [river, flood, roads, guide, layers, buildings, roadpanel, detection, nwm, rain, forecast, voice, student, a11y, whatif, share, admin, drill];

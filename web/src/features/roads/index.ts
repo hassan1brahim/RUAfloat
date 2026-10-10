@@ -6,7 +6,7 @@ import { Router } from "../../lib/route";
 import "./style.css";
 
 /** Contract for later detection features: road segments closed by real observations, with their evidence. */
-export type Evidence = { kind: "sensor" | "report"; closes: boolean; text: string; time: string };
+export type Evidence = { kind: "sensor" | "report" | "rain"; closes: boolean; text: string; time: string };
 export type Observations = { closed: Set<number>; evidence: (ei: number) => Evidence[] };
 export const NO_OBSERVATIONS: Observations = { closed: new Set(), evidence: () => [] };
 export const GENERIC_ROAD = /^(footpath|path|service road|bike path|steps|unnamed road|walkway|access road)$/;
