@@ -55,7 +55,7 @@ const feature: Feature = {
       <div class="row gap"><button id="btn-locate" class="btn ghost small"><span aria-hidden="true">◎</span> My location</button><button id="btn-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button></div>
       <div class="row gap"><button id="btn-guide" class="btn primary"><span aria-hidden="true">🔊</span> Guide me</button></div>
       <div id="guide-out" class="guide-out" hidden>
-        <div class="dest" id="g-dest" aria-live="polite"></div><blockquote id="g-script"></blockquote>
+        <div class="dest" id="g-dest" tabindex="-1"></div><blockquote id="g-script"></blockquote>
         <div class="row gap small"><button id="btn-replay" class="btn ghost small"><span aria-hidden="true">↻</span> Play again</button><span id="g-voice" class="muted"></span></div>
         <div class="badge-row" id="g-by"></div><ol class="steps" id="g-steps"></ol>
         <div id="g-replan" class="replan" hidden>River changed: route re-planned. <button id="btn-respeak" class="link">Hear it</button></div>
@@ -79,13 +79,35 @@ const feature: Feature = {
     $("btn-replay").onclick = () => void speak(lastScript);
     $("btn-respeak").onclick = () => void run();
     $("btn-locate").onclick = () => navigator.geolocation?.getCurrentPosition(
-      (p) => setStart({ name: "Your location", lon: p.coords.longitude, lat: p.coords.latitude }),
-      () => app.hint("Location unavailable: pick on the map instead"));
+      (p) => {
+        setStart({ name: "Your location", lon: p.coords.longitude, lat: p.coords.latitude });
+        // Laptops have no GPS and guess from Wi-Fi: say how far off it may be, so a wrong guess is obvious.
+        app.hint(`From: Your location (accurate to about ${Math.round(p.coords.accuracy)} m) · wrong? Pick on map`);
+      },
+      () => app.hint("Location unavailable: pick on the map instead"),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 
     function setStart(s: Start) {
+      // A new starting point makes the old route wrong: clear it so nothing (screen, voice agent, Map in words) reads it.
+      if (start && plan && (start.lon !== s.lon || start.lat !== s.lat)) {
+        plan = null;
+        (app.map.getSource("route") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: [] });
+        $("g-steps").innerHTML = "";
+        $("guide-out").hidden = true;
+      }
       start = s;
       app.hint(`From: ${s.name} · click a road for its status`);
-      sel.selectedIndex = Math.max(0, [...sel.options].findIndex((o) => o.text === s.name));
+      // Places not in the list (your location, a pinned point, a building found by voice) get their own entry,
+      // so the dropdown never claims nothing is chosen.
+      let idx = [...sel.options].findIndex((o) => o.text === s.name);
+      if (idx < 0) {
+        [...sel.options].filter((o) => o.dataset.extra).forEach((o) => o.remove());
+        const o = new Option(s.name, JSON.stringify(s));
+        o.dataset.extra = "1";
+        sel.add(o, 1);
+        idx = 1;
+      }
+      sel.selectedIndex = idx;
       marker?.remove();
       const el = document.createElement("div");
       el.style.cssText = "width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid #cc0033;box-shadow:0 0 0 6px rgba(204,0,51,.25)";
@@ -110,6 +132,8 @@ const feature: Feature = {
       const rise = app.rise(), s = start, obs = app.maybe("observations")?.() ?? NO_OBSERVATIONS;
       const p = app.get("grid").depthAt(s.lon, s.lat, rise) >= 3 ? null : app.get("router").plan(s.lon, s.lat, rise, places, obs.closed);
       showPlan(p);
+      // Screen-reader users land on the result instead of staying on the button with no idea where it appeared.
+      $("g-dest").focus();
       if (p) {
         const b = new maplibregl.LngLatBounds();
         p.coords.forEach((c) => b.extend(c));

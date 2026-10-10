@@ -11,7 +11,9 @@ import detection from "./detection";
 import nwm from "./nwm";
 import forecast from "./forecast";
 import voice from "./voice";
+import a11y from "./a11y";
+import whatif from "./whatif";
 import share from "./share";
 import about from "./about";
 
-export const FEATURES: Feature[] = [river, flood, roads, guide, layers, buildings, roadpanel, detection, nwm, forecast, voice, share, about];
+export const FEATURES: Feature[] = [river, flood, roads, guide, layers, buildings, roadpanel, detection, nwm, forecast, voice, a11y, whatif, share, about];

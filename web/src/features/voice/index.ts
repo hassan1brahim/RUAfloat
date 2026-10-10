@@ -4,6 +4,7 @@ import { $, BASE_FT } from "../../core/util";
 import { onSpeak, speak, stopSpeaking } from "../../lib/speech";
 import { GENERIC_ROAD, NO_OBSERVATIONS } from "../roads";
 import { VoiceAssistant } from "./assistant";
+import { AgentConversation } from "./conversation";
 import "./style.css";
 
 let voice: VoiceAssistant;
@@ -37,6 +38,7 @@ const feature: Feature = {
     btn.insertAdjacentHTML("afterend", `<span id="voice-help" class="sr-only">Hands-free mode for blind and low-vision users. Press V to start or stop. Then just talk. Keys: space for a briefing, G to be guided, N for next step, R to repeat, Escape to stop.</span>`);
     $("skip-voice").onclick = (e) => { e.preventDefault(); btn.focus(); };
     app.card({ col: "right", id: "voice-card", title: "Voice assistant", order: 10, hidden: true, extraTitle: ` <span class="src muted">V to stop</span>`, html: `
+      <div id="voice-state" class="small muted"></div>
       <ul id="voice-log" class="voice-log"></ul>
       <div class="small muted">Say “help” for what you can ask. Keys: Space briefing · G guide · N next step · R repeat · Esc stop.</div>` });
     $("map").setAttribute("role", "img");
@@ -70,19 +72,48 @@ const feature: Feature = {
     }, log);
     if (import.meta.env.DEV) (window as unknown as { __voice: VoiceAssistant }).__voice = voice;
 
-    const toggle = () => {
-      if (voice.active) voice.stop(); else void voice.start();
-      btn.setAttribute("aria-pressed", String(voice.active)); btn.classList.toggle("on", voice.active); $("voice-card").hidden = !voice.active;
+    // Full conversation through ElevenLabs Agents when the server has an agent; the command assistant otherwise.
+    const showState = () => {
+      const on = agent.active || voice.active;
+      btn.setAttribute("aria-pressed", String(on)); btn.classList.toggle("on", on); $("voice-card").hidden = !on;
     };
-    btn.onclick = toggle;
+    const agent = new AgentConversation({
+      facts: () => app.facts(),
+      placeNames: () => guide.starts.map((s) => s.name),
+      roadNames: () => roadNames,
+      setStartByName: (n) => { const st = guide.starts.find((s) => s.name === n); if (st) guide.setStart(st); return !!st; },
+      setStartAt: (lon, lat) => guide.setStart({ name: "Your location", lon, lat }),
+      setStart: (s) => guide.setStart(s),
+      inArea: (lon, lat) => app.get("grid").cellAt(lon, lat) >= 0,
+      hasStart: () => !!guide.start(),
+      guide: () => guide.run(true),
+      roadFacts,
+    }, log, (s) => { $("voice-state").textContent = s; showState(); });
+    let agentReady: boolean | null = null;
+    if (import.meta.env.DEV) (window as unknown as { __agent: AgentConversation }).__agent = agent;
+
+    const toggle = async () => {
+      if (agent.active) await agent.stop();
+      else if (voice.active) voice.stop();
+      else {
+        agentReady ??= await AgentConversation.available();
+        if (agentReady) {
+          try { await agent.start(); }
+          catch (e) { log(`⚠️ ElevenLabs conversation unavailable (${(e as Error).message}). Using basic voice mode.`); void voice.start(); }
+        } else void voice.start();
+      }
+      showState();
+    };
+    btn.onclick = () => void toggle();
     document.addEventListener("keydown", (e) => {
       if (!$("voice-gate").hidden) return;   // the start screen handles its own first key
       const t = e.target as HTMLElement;
       if (t.closest("input, textarea, select")) return;
       if (e.key === " " && t.closest("button, a, summary, [role=button]")) return;   // Space still presses the focused control
-      if (e.key.toLowerCase() === "v" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); toggle(); return; }
+      if (e.key.toLowerCase() === "v" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); void toggle(); return; }
+      if (agent.active && e.key === "Escape") { void toggle(); return; }
       if (!voice.active) return;
-      if (e.key === "Escape") { toggle(); return; }
+      if (e.key === "Escape") { void toggle(); return; }
       if ([" ", "g", "r", "n"].includes(e.key.toLowerCase())) { e.preventDefault(); voice.key(e.key.toLowerCase()); }
     });
   },

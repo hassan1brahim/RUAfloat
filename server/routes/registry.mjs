@@ -5,6 +5,8 @@ import detect from "./detect.mjs";
 import nwm from "./nwm.mjs";
 import forecast from "./forecast.mjs";
 import assist from "./assist.mjs";
+import agent from "./agent.mjs";
+import places from "./places.mjs";
 import sensors from "./sensors.mjs";
 
-export default [live, guide, detect, sensors, nwm, forecast, assist];
+export default [live, guide, detect, sensors, nwm, forecast, assist, agent, places];
