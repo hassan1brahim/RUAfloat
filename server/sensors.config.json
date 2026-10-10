@@ -1,0 +1,10 @@
+[
+  {
+    "id": "river-rd-low",
+    "name": "River Road low point",
+    "road": "River Road",
+    "lat": 40.502972,
+    "lon": -74.439763,
+    "mount_cm": 250
+  }
+]
