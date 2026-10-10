@@ -9,6 +9,19 @@ type MlIda = { t: string; now: number; pred: Record<string, number>; actual: Rec
 let live: MlLive | null = null, ida: MlIda | null = null;
 declare module "../../core/app" { interface Services { mlForecast: () => MlLive | null } }
 
+/** Orange dots on the river chart at issue time + h hours (the chart stores its scale on the svg). */
+function plot(issued: string, pts: [number, number][]) {
+  const svg = document.getElementById("spark") as unknown as SVGSVGElement | null;
+  if (!svg?.dataset.t0) return;
+  const { t0, t1, lo, hi } = Object.fromEntries(Object.entries(svg.dataset).map(([k, v]) => [k, Number(v)]));
+  const X = (t: number) => ((t - t0) / (t1 - t0 || 1)) * 300, Y = (v: number) => 78 - ((v - lo) / (hi - lo)) * 74;
+  svg.querySelectorAll(".ml-pt").forEach((n) => n.remove());
+  for (const [h, ft] of pts) {
+    const x = X(Date.parse(issued) + h * 3600e3);
+    if (x >= 0 && x <= 300) svg.insertAdjacentHTML("beforeend", `<circle class="ml-pt" cx="${x}" cy="${Y(ft)}" r="3.5" fill="#fb923c" stroke="#0f151d" stroke-width="1"/>`);
+  }
+}
+
 const feature: Feature = {
   id: "forecast",
   async init(app) {
@@ -26,16 +39,23 @@ const feature: Feature = {
     if (app.state.mode === "ida") {
       const river = app.get("river"), t = river.ida.series[river.idaIndex()][0].slice(0, 13);
       const r = ida?.find((x) => x.t.slice(0, 13) === t);
-      el.innerHTML = r ? `<b>Our ML forecast</b>, never trained on Ida. Issued at this hour:
-        <div class="row3">${[3, 6, 12].map((h) => `<span>+${h} h: ${r.pred[`${h}h`].toFixed(1)}<br><span class="muted">real ${r.actual[`${h}h`]?.toFixed(1) ?? "?"}</span></span>`).join("")}</div>`
-        : `<span class="muted">ML forecast for this hour not available.</span>`;
+      if (!r) { el.innerHTML = `<span class="muted">ML forecast for this hour not available.</span>`; return; }
+      // the forecast made at this hour, as orange dots on the chart; the blue line is what really happened
+      plot(river.ida.series[river.idaIndex()][0], [3, 6, 12].map((h) => [h, r.pred[`${h}h`]]));
+      el.innerHTML = `<div class="ml-h"><i class="ml-dot"></i><b>Our ML forecast</b> <span class="muted">· made at this hour, never trained on Ida</span></div>
+        <div class="ml-chips">${[3, 6, 12].map((h) => {
+          const p = r.pred[`${h}h`], a = r.actual[`${h}h`], off = a == null ? null : Math.abs(p - a);
+          const cls = off == null ? "" : off < 1 ? "good" : off < 2 ? "fair" : "poor";
+          return `<span class="ml-chip ${cls}"><small>in ${h} h</small><b>${p.toFixed(1)} ft</b><span>${off == null ? "no reading" : `${off.toFixed(1)} ft off`}</span></span>`;
+        }).join("")}</div>`;
       return;
     }
     if (!live || live.error) { el.innerHTML = `<span class="muted">ML forecast: ${esc(live?.error ?? "unavailable")}</span>`; return; }
     const score = (h: number) => { const s = live!.scores[`${h}h`]; return s?.mae_ft_high_water != null ? `±${s.mae_ft_high_water} ft` : ""; };
-    el.innerHTML = `<b>Our ML forecast</b> (${live.inputs.length} river gauges, issued ${et(live.issued)} ET):
-      <div class="row3">${live.predictions.map((p) => `<span>+${p.h} h: ${p.ft.toFixed(1)} ft<br><span class="muted">${score(p.h)}</span></span>`).join("")}</div>
-      <span class="muted">± = typical error at high water on years it never saw.</span>`;
+    plot(live.issued, live.predictions.map((p) => [p.h, p.ft]));
+    el.innerHTML = `<div class="ml-h"><i class="ml-dot"></i><b>Our ML forecast</b> <span class="muted">· ${live.inputs.length} river gauges, ${et(live.issued)} ET</span></div>
+      <div class="ml-chips">${live.predictions.map((p) => `<span class="ml-chip"><small>in ${p.h} h</small><b>${p.ft.toFixed(1)} ft</b><span>${score(p.h) || "&nbsp;"}</span></span>`).join("")}</div>
+      <div class="muted small">± = typical error at high water, on years it never saw.</div>`;
   },
   facts(app) {
     return { our_ml_forecast: app.state.mode === "live" && live && !live.error ? live.predictions.map((p) => ({ in_hours: p.h, ft: p.ft })) : null };

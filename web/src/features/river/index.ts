@@ -85,7 +85,7 @@ function applyIda() {
   $<HTMLInputElement>("ida-scrub").value = String(idaIdx);
   const hour = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
   $("ida-label").textContent = `${et(t)} · crest 42.13 ft at ${hour(ida.crest[0])} ET`;
-  $("g-note").textContent = "Hurricane Ida remnants, Sept 1–3, 2021. USGS 01403060 readings, hourly.";
+  $("g-note").textContent = `Ida 2021 replay · ${et(t)} ET · white dot = this hour`;
   drawSpark(ida.series, idaIdx, []);
   app.setStage(ft);
 }
@@ -108,6 +108,18 @@ async function refreshLive() {
   if (app.state.mode === "live") applyLive();
 }
 
+/** NWS flood categories at this gauge, as colors (shared by the chart bands and the level bar). */
+const CAT_COLOR: Record<string, string> = { action: "#fde047", minor: "#fb923c", moderate: "#f87171", major: "#f0abfc" };
+
+/** One bar from 15 to 45 ft split into the NWS categories, with a marker at the current level. */
+function drawLevelBar(ft: number) {
+  const LO = 15, HI = 45, pct = (v: number) => ((Math.min(HI, Math.max(LO, v)) - LO) / (HI - LO)) * 100;
+  const segs = [["normal", LO, 26, "#1f6f43"], ["action", 26, 28, CAT_COLOR.action], ["minor", 28, 30, CAT_COLOR.minor], ["moderate", 30, 33, CAT_COLOR.moderate], ["major", 33, HI, CAT_COLOR.major]] as const;
+  $("g-bar").innerHTML = `<div class="lvl-track">${segs.map(([, a, b, c]) => `<i style="left:${pct(a)}%;width:${pct(b) - pct(a)}%;background:${c}"></i>`).join("")}
+      <b class="lvl-mark" style="left:${pct(ft)}%"></b></div>
+    <div class="lvl-labels">${[26, 28, 30, 33].map((v) => `<span style="left:${pct(v)}%">${v}</span>`).join("")}<span style="left:${pct(HI)}%;transform:translateX(-100%)">ft</span></div>`;
+}
+
 function drawSpark(series: [string, number][], idx: number, forecast: [string, number][]) {
   const svg = $("spark") as unknown as SVGSVGElement;
   const all = [...series, ...forecast];
@@ -118,8 +130,10 @@ function drawSpark(series: [string, number][], idx: number, forecast: [string, n
   const X = (t: string) => ((Date.parse(t) - t0) / (t1 - t0 || 1)) * 300;
   const Y = (v: number) => 78 - ((v - lo) / (hi - lo)) * 74;
   const path = (pts: [string, number][]) => pts.map((p, i) => `${i ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("");
-  const color: Record<string, string> = { major: "#f0abfc", moderate: "#f87171", minor: "#fb923c", action: "#fde047" };
-  const cats = CATS.map((c) => `<line x1="0" x2="300" y1="${Y(c.ft)}" y2="${Y(c.ft)}" stroke="${color[c.k]}" stroke-opacity=".35" stroke-dasharray="3 3"/>`).join("");
+  const tops = [...CATS].sort((a, b) => a.ft - b.ft);   // action 26, minor 28, moderate 30, major 33
+  const cats = tops.map((c, i) => { const top = Y(Math.min(hi, tops[i + 1]?.ft ?? hi)), bot = Y(c.ft);
+    return `<rect x="0" width="300" y="${top}" height="${Math.max(0, bot - top)}" fill="${CAT_COLOR[c.k]}" fill-opacity=".24"/>`; }).join("");
+  Object.assign(svg.dataset, { t0: String(t0), t1: String(t1), lo: String(lo), hi: String(hi) });
   const cur = series[idx];
   svg.innerHTML = `${cats}
     <path d="${path(series)}" fill="none" stroke="#38bdf8" stroke-width="2"/>
@@ -168,9 +182,10 @@ const feature: Feature = {
         <div><span id="g-stage" class="big mono">--.-</span><span class="unit"> ft</span></div>
         <div class="g-side"><div id="g-cat" class="cat">--</div><div class="small muted" id="g-rise">rise --</div></div>
       </div>
+      <div class="lvl" id="g-bar" aria-hidden="true"></div>
       <svg id="spark" viewBox="0 0 300 80" preserveAspectRatio="none" role="img" aria-label="River stage over time"></svg>
       <div class="small muted" id="g-note"></div>
-      <ul class="impacts" id="g-impacts"></ul>` });
+      <details class="impacts-box"><summary>What this level means in Bound Brook (NWS)</summary><ul class="impacts" id="g-impacts"></ul></details>` });
     app.card({ col: "left", id: "alerts-card", title: "NWS alerts · New Brunswick", order: 70,
       extraTitle: ` <a class="src" href="https://www.weather.gov/phi/" target="_blank" rel="noopener">Mt Holly ↗</a>`, html: `<ul class="alerts" id="alerts"><li class="muted">Loading…</li></ul>` });
 
@@ -209,7 +224,8 @@ const feature: Feature = {
     $("top-stage").textContent = fmtFt(ft);
     $("g-stage").textContent = ft.toFixed(1);
     $("stage-val").textContent = fmtFt(ft);
-    $("g-rise").textContent = `river rise +${(rise / 3.048).toFixed(1)} ft over baseflow`;
+    $("g-rise").textContent = `${(rise / 3.048).toFixed(1)} ft above normal`;
+    drawLevelBar(ft);
     const impacts = live?.gauge?.impacts ?? [];
     $("g-impacts").innerHTML = impacts.filter((i) => ft >= i.stage).map((i) => `<li><b>${i.stage} ft</b> ${esc(i.statement)}</li>`).join("")
       || `<li class="muted">Below NWS impact stages (first impact at 28 ft).</li>`;
