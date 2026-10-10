@@ -170,9 +170,12 @@ export class App {
     this.map.getCanvas().style.cursor = "crosshair";
   }
 
+  private openPopup: maplibregl.Popup | null = null;
   popup(pt: Pt, html: string) {
-    new maplibregl.Popup({ closeButton: true, maxWidth: "340px" }).setLngLat([pt.lon, pt.lat]).setHTML(html).addTo(this.map);
+    this.openPopup = new maplibregl.Popup({ closeButton: true, maxWidth: "340px" }).setLngLat([pt.lon, pt.lat]).setHTML(html).addTo(this.map);
   }
+  /** Close the last popup, e.g. when what it describes is about to change (a simulation moving the river level). */
+  closePopup() { this.openPopup?.remove(); this.openPopup = null; }
 
   async start(createMap: () => Promise<MLMap>) {
     document.body.dataset.view = this.state.view;
