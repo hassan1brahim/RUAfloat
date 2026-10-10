@@ -168,7 +168,7 @@ const feature: Feature = {
       app.hint("Finding your location…");
       navigator.geolocation.getCurrentPosition(
         (p) => {
-          if (app.get("grid").cellAt(p.coords.longitude, p.coords.latitude) < 0) return askForPlace("You're outside the area HackRU-26 covers. Choose where you are on campus:");
+          if (app.get("grid").cellAt(p.coords.longitude, p.coords.latitude) < 0) return askForPlace("You're outside the area this app covers. Choose where you are on campus:");
           setStart({ name: "Your location", lon: p.coords.longitude, lat: p.coords.latitude });
           // Laptops have no GPS and guess from Wi-Fi: say how far off it may be, so a wrong guess is obvious.
           app.hint(`From: Your location (accurate to about ${Math.round(p.coords.accuracy)} m) · wrong? Pick on map`);
@@ -199,9 +199,9 @@ const feature: Feature = {
         await speak(`${pos ? "You are not on campus" : "I could not get your location"}, so for this replay I will start from ${DEMO_START}.`);
       } else {
         void speak(pos
-          ? "You are outside the area HackRU-26 covers, which is Rutgers New Brunswick. Choose a place on campus. If you are in danger, call 9 1 1."
+          ? "You are outside the area this app covers, which is Rutgers New Brunswick. Choose a place on campus. If you are in danger, call 9 1 1."
           : "I could not get your location. Choose the building you are in, then press Route from this place. If you are in danger, call 9 1 1.");
-        return askForPlace(pos ? "You're outside the area HackRU-26 covers. Choose where you are on campus:" : "Couldn't get your location. Choose where you are:");
+        return askForPlace(pos ? "You're outside the area this app covers. Choose where you are on campus:" : "Couldn't get your location. Choose where you are:");
       }
       await run();
     }

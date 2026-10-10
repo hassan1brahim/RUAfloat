@@ -1,7 +1,7 @@
 /**
- * Full spoken conversation with HackRU-26 through ElevenLabs Agents: natural speech, follow-ups, interruptions.
+ * Full spoken conversation with the HackRU-26 Flood Guide through ElevenLabs Agents: natural speech, follow-ups, interruptions.
  * The agent only talks. Every fact and every route comes from the app through these client tools,
- * the same rule as the rest of HackRU-26 (code picks the route, AI phrases it).
+ * the same rule as the rest of the app (code picks the route, AI phrases it).
  */
 import { Conversation, type VoiceConversation } from "@elevenlabs/client";
 import type { Plan } from "../../lib/route";
@@ -136,7 +136,7 @@ export class AgentConversation {
         navigator.geolocation.getCurrentPosition(
           (p) => {
             const { longitude: lon, latitude: lat } = p.coords;
-            if (!c.inArea(lon, lat)) return res(json({ ok: false, note: "They are outside the area HackRU-26 covers (Rutgers New Brunswick)." }));
+            if (!c.inArea(lon, lat)) return res(json({ ok: false, note: "They are outside the area this app covers (Rutgers New Brunswick)." }));
             c.setStartAt(lon, lat);
             this.fromGps = true;
             res(json({ ok: true, location: "their GPS position", accuracy_m: Math.round(p.coords.accuracy) }));
@@ -190,12 +190,12 @@ export class AgentConversation {
         onDisconnect: () => { this.stopFollowing(); this.active = false; this.conv = null; this.onState("Conversation ended."); },
         onModeChange: ({ mode }) => {
           this.mode = mode === "speaking" ? "speaking" : "listening";
-          this.onState(mode === "speaking" ? "HackRU-26 is speaking…" : "Listening. Just talk.");
+          this.onState(mode === "speaking" ? "Flood Guide is speaking…" : "Listening. Just talk.");
           this.flush();
         },
         onMessage: ({ message, role }) => {
           if (role === "user" && message.startsWith("NAVIGATION UPDATE")) return;   // already logged as 📍
-          this.log(`${role === "user" ? "🗣️ You" : "🔊 HackRU-26"}: ${message}`);
+          this.log(`${role === "user" ? "🗣️ You" : "🔊 Flood Guide"}: ${message}`);
         },
         onError: (message) => this.log(`⚠️ ${message}`),
       }) as VoiceConversation;

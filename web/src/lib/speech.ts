@@ -6,7 +6,7 @@
  */
 let audio: HTMLAudioElement | null = null;
 const listeners: ((text: string, voice: string) => void)[] = [];
-const SR_KEY = "HackRU-26-screen-reader";
+const SR_KEY = "hackru-26-screen-reader";
 
 export function screenReaderMode(): boolean {
   if (srOverride !== null) return srOverride;   // set this page, even when storage is blocked

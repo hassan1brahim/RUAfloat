@@ -12,7 +12,7 @@ import requests
 
 CACHE = pathlib.Path(__file__).resolve().parent.parent / "data" / "raw" / "usgs"
 API = "https://api.waterdata.usgs.gov/ogcapi/v0/collections/continuous/items"
-UA = {"User-Agent": "HackRU-26/0.1 (Rutgers flood command)"}
+UA = {"User-Agent": "hackru-26/0.1 (Rutgers flood command)"}
 
 
 PAUSE_S = 2.0  # USGS rate-limits keyless clients (HTTP 429); stay polite, the app shares this API

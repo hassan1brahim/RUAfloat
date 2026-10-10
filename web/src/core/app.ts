@@ -154,7 +154,7 @@ export class App {
   }
   /** Right side of the header: the "Right now" block. */
   headerNow(el: HTMLElement) { $("top-now").append(el); }
-  /** Under the HackRU-26 title (the live / what-if indicator). */
+  /** Under the app title (the live / what-if indicator). */
   heroStatus(el: HTMLElement) { $("hero-status").append(el); }
   /** A floating card on the map, like the legend. */
   mapOverlay(el: HTMLElement) { $("mapwrap").append(el); }
