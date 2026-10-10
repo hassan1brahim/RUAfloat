@@ -29,8 +29,8 @@ const feature: Feature = {
 
     document.body.insertAdjacentHTML("afterbegin", `
       <a class="skip" href="#btn-voice" id="skip-voice">Skip to voice assistant</a>
-      <div id="voice-gate" class="voice-gate" role="button" tabindex="0" aria-label="Press any key or tap anywhere to start the HackRU-26 voice assistant" hidden>
-        <div><div class="big-icon" aria-hidden="true">🎧</div><h1>HackRU-26 voice assistant</h1><p>Press any key or tap anywhere to start.<br>It will tell you what the river is doing and where to go.</p></div>
+      <div id="voice-gate" class="voice-gate" role="button" tabindex="0" aria-label="Press any key or tap anywhere to start the RUAfloat voice assistant" hidden>
+        <div><div class="big-icon" aria-hidden="true">🎧</div><h1>RUAfloat voice assistant</h1><p>Press any key or tap anywhere to start.<br>It will tell you what the river is doing and where to go.</p></div>
       </div>`);
     const btn = document.createElement("button");
     // Sighted users start voice mode from the Accessibility panel; this stays for keyboard and screen-reader users (skip link, Tab).

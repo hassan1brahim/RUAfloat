@@ -1,5 +1,5 @@
 /**
- * Full spoken conversation with the HackRU-26 Flood Guide through ElevenLabs Agents: natural speech, follow-ups, interruptions.
+ * Full spoken conversation with RUAfloat through ElevenLabs Agents: natural speech, follow-ups, interruptions.
  * The agent only talks. Every fact and every route comes from the app through these client tools,
  * the same rule as the rest of the app (code picks the route, AI phrases it).
  */
