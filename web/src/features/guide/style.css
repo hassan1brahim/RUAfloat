@@ -63,3 +63,5 @@ body[data-view="student"] .col #guide-card h2 { font-size: 16px; font-weight: 80
 @media (pointer: coarse) { .icon-btn { width: 44px; height: 44px; } .place-results .hit { min-height: 44px; } }
 .route-row:focus-visible, .place-results .hit:focus-visible { outline: 3px solid #fde047; outline-offset: -3px; }
 .place-results .hit:hover .muted, .place-results .hit:focus-visible .muted { color: #a9b6c3; }
+#guide-card h2 { display: flex; align-items: center; gap: 10px; }
+.demo-loc { width: 18px; height: 18px; margin: 0; accent-color: var(--water); cursor: pointer; }

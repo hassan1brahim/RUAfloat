@@ -4,6 +4,7 @@ import { TAP, type App, type Feature, type Pt } from "../../core/app";
 import { $, esc, fmtFt, getJson, postJson } from "../../core/util";
 import { announce } from "../../lib/speech";
 import { bestPosition, circle, locateError, type Fix } from "../../lib/locate";
+import { demoOn, setDemo } from "../../lib/demo-location";
 import { DRY_MARGIN_DM, type Place, type Plan } from "../../lib/route";
 import { onSpeak, speak, stopSpeaking } from "../../lib/speech";
 import { NO_OBSERVATIONS } from "../roads";
@@ -78,7 +79,7 @@ const feature: Feature = {
     app.setDefaultHint(`${TAP} a road for its status · 📍 Pick on map to set your location`);
 
     // One box: where you are (or your location), then Route from this place.
-    app.card({ student: "left", studentOrder: 1, id: "guide-card", title: "Get me to safety", order: 20, html: `
+    app.card({ student: "left", studentOrder: 1, id: "guide-card", title: "Get me to safety", order: 20, extraTitle: ` <input type="checkbox" id="demo-loc" class="demo-loc" aria-label="Demo: start at Busch Student Center" title="Demo: start at Busch Student Center" ${demoOn() ? "checked" : ""} />`, html: `
       <button id="btn-guide" class="btn primary safety-go"><span aria-hidden="true">🆘</span> Use my location</button>
       <div id="start-box" class="start-box">
         <div id="start-msg" class="start-msg" role="status" hidden></div>
@@ -107,6 +108,7 @@ const feature: Feature = {
         <!-- spoken script, voice and AI-guard details: kept for debugging and a possible Admin view, not shown to students -->
         <blockquote id="g-script" hidden></blockquote><span id="g-voice" hidden></span><div class="badge-row" id="g-by" hidden></div>
       </div>` });
+    $<HTMLInputElement>("demo-loc").onchange = (e) => setDemo((e.target as HTMLInputElement).checked);
     app.card({ student: "left", studentOrder: 6, id: "contacts-card", title: "Contact emergency", order: 70, html: `
       <ul class="contacts">
         <li><b>Emergency</b><a href="tel:911">911</a></li>

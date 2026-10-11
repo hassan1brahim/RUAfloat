@@ -4,6 +4,8 @@
  * most accurate reading instead of taking the first one. Never a cached position: the person may have moved.
  * Laptops have no GPS and guess from Wi-Fi (often 50-500 m off); callers show `accuracy` so the user can correct it.
  */
+import { DEMO_FIX, demoOn } from "./demo-location";
+
 export type Fix = { lon: number; lat: number; accuracy: number };
 
 /** Why the last bestPosition() came back empty, in words a student can act on. */
@@ -13,6 +15,7 @@ export function bestPosition(o: { maxWaitMs?: number; goodEnoughM?: number; onPr
   const { maxWaitMs = 8000, goodEnoughM = 25, onProgress } = o;
   return new Promise((resolve) => {
     locateError = "";
+    if (demoOn()) return resolve(DEMO_FIX);   // demo checkbox: Busch Student Center
     if (!window.isSecureContext) { locateError = "Location only works on a secure (https) page. Open the app's main link, or choose your building."; return resolve(null); }
     if (!navigator.geolocation) { locateError = "This browser can't share its location. Choose your building."; return resolve(null); }
     let best: Fix | null = null, done = false;
