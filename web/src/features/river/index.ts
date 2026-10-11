@@ -33,6 +33,11 @@ const PRESETS = [
   { label: "Irene 2011 · 41.9", ft: 41.9 }, { label: "Ida 2021 / Floyd 1999 · 42.13", ft: 42.13 },
 ];
 
+/** Admin checkpoint (checkbox on the river controls): a saved manual level at a fixed time, kept across reloads. */
+const CHECKPOINT = { ft: 31.1, at: "2021-09-02T03:00:00Z" };   // Sep 1, 11 PM ET
+let checkpoint = false;
+try { checkpoint = localStorage.getItem("checkpoint") === "1"; } catch { /* storage blocked: starts off */ }
+
 let ida: Ida, floods: Flood[] = [], live: Live | null = null, idaIdx = 0, playing = 0, app: App;
 
 /** Start a replay ~10 hours before the crest: the rise is the interesting part. */
@@ -41,7 +46,22 @@ const startIdx = () => Math.max(0, ida.series.findIndex((p) => p[0] >= ida.crest
 type Tab = "ida" | "manual";
 let tab: Tab = "ida";
 
+function saveCheckpoint(on: boolean) {
+  checkpoint = on;
+  try { localStorage.setItem("checkpoint", on ? "1" : "0"); } catch { /* ignore */ }
+  $<HTMLInputElement>("checkpoint").checked = on;
+  if (!on && app.state.mode === "whatif") $("g-note").textContent = "";
+}
+
+/** Checked: jump to the checkpoint level. Unchecked: back to live. */
+function setCheckpoint(on: boolean) {
+  saveCheckpoint(on);
+  if (on) { $<HTMLInputElement>("stage-slider").value = String(CHECKPOINT.ft); setTab("manual"); }
+  else setMode("live");
+}
+
 function setMode(m: Mode) {
+  if (checkpoint && m !== "whatif") saveCheckpoint(false);
   app.state.mode = m;
   if (playing && m !== "ida") togglePlay();
   if (m === "ida") tab = "ida";
@@ -49,7 +69,10 @@ function setMode(m: Mode) {
   syncUi();
   if (m === "live") applyLive();
   if (m === "ida") { if (!idaIdx) idaIdx = startIdx(); applyIda(); }
-  if (m === "whatif") app.setStage(+$<HTMLInputElement>("stage-slider").value);
+  if (m === "whatif") {
+    if (checkpoint) $("g-note").textContent = `✓ Checkpoint · ${et(CHECKPOINT.at)} ET · ${fmtFt(CHECKPOINT.ft)} (manual)`;
+    app.setStage(+$<HTMLInputElement>("stage-slider").value);
+  }
 }
 
 function setTab(t: Tab) {
@@ -75,7 +98,7 @@ function syncUi() {
 /** The time beside the level: now when live, the replay hour during Ida, none for a made-up level. */
 function stampTop() {
   const m = app.state.mode;
-  $("top-time").textContent = m === "live" ? `${et(new Date().toISOString())} ET` : "";
+  $("top-time").textContent = m === "live" ? `${et(new Date().toISOString())} ET` : m === "whatif" && checkpoint ? `${et(CHECKPOINT.at)} ET` : "";
 }
 
 function togglePlay() {
@@ -170,7 +193,8 @@ const feature: Feature = {
     modeCtl.className = "mode-float";
     // Admin only for now: students see the live river. A demo link (?scenario=ida) still opens the replay bar, with Back to Live.
     modeCtl.dataset.views = "admin";
-    modeCtl.innerHTML = `<div class="seg2" id="mode-seg" role="group" aria-label="River data"><button data-m="live">● LIVE</button><button data-m="whatif">WHAT-IF ▾</button></div>`;
+    modeCtl.innerHTML = `<div class="seg2" id="mode-seg" role="group" aria-label="River data"><button data-m="live">● LIVE</button><button data-m="whatif">WHAT-IF ▾</button></div>
+      <label class="checkpoint" title="Checkpoint: Sep 1, 11 PM · 31.1 ft (manual)"><input type="checkbox" id="checkpoint" ${checkpoint ? "checked" : ""} /> Sep 1 · 11 PM · 31.1 ft</label>`;
     app.mapOverlay(modeCtl);
     $("whatif-bar").innerHTML = `
       <span class="tag">WHAT-IF</span>
@@ -202,6 +226,7 @@ const feature: Feature = {
     document.querySelectorAll<HTMLButtonElement>("#mode-seg button").forEach((b) => (b.onclick = () => (b.dataset.m === "live" ? setMode("live") : setTab(tab))));
     document.querySelectorAll<HTMLButtonElement>("#wi-tabs button").forEach((b) => (b.onclick = () => setTab(b.dataset.tab as Tab)));
     $("wi-live").onclick = () => setMode("live");
+    $<HTMLInputElement>("checkpoint").onchange = (e) => setCheckpoint((e.target as HTMLInputElement).checked);
     const scrub = $<HTMLInputElement>("ida-scrub");
     scrub.max = String(ida.series.length - 1);
     const pick = $<HTMLSelectElement>("flood-pick");
@@ -220,11 +245,11 @@ const feature: Feature = {
     scrub.oninput = () => { idaIdx = +scrub.value; applyIda(); };
     $("ida-play").onclick = togglePlay;
     const slider = $<HTMLInputElement>("stage-slider");
-    slider.oninput = () => { tab = "manual"; app.setStage(+slider.value); };
+    slider.oninput = () => { if (checkpoint) saveCheckpoint(false); tab = "manual"; app.setStage(+slider.value); };
     for (const p of PRESETS) {
       const c = document.createElement("button");
       c.className = "chip"; c.textContent = p.label;
-      c.onclick = () => { slider.value = String(p.ft); tab = "manual"; app.setStage(p.ft); };
+      c.onclick = () => { if (checkpoint) saveCheckpoint(false); slider.value = String(p.ft); tab = "manual"; app.setStage(p.ft); };
       $("presets").append(c);
     }
     app.provide("river", {
@@ -234,6 +259,7 @@ const feature: Feature = {
     });
     syncUi();
     await refreshLive();
+    if (checkpoint) setCheckpoint(true);
     setInterval(() => app.state.mode === "live" && refreshLive(), 60_000);
   },
   update(a) {
