@@ -1,6 +1,6 @@
 /** "Get me to safety": start point, nearest dry gathering point, walking route, spoken script (AI + guard), contacts. */
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
-import type { App, Feature, Pt } from "../../core/app";
+import { TAP, type App, type Feature, type Pt } from "../../core/app";
 import { $, esc, fmtFt, getJson, postJson } from "../../core/util";
 import { announce } from "../../lib/speech";
 import { bestPosition, circle, locateError, type Fix } from "../../lib/locate";
@@ -75,7 +75,7 @@ const feature: Feature = {
     app.legend(`<div>${ic("hospital", "#f472b6")}Hospital</div>`, { key: "hospital" });
     app.legend(`<div>${ic("police", "#60a5fa")}Police</div>`, { key: "police" });
     app.legend(`<div>${ic("fire", "#fb923c")}Fire station</div>`, { key: "fire" });
-    app.setDefaultHint("Click a road for its status · 📍 Pick on map to set your location");
+    app.setDefaultHint(`${TAP} a road for its status · 📍 Pick on map to set your location`);
 
     // One box: where you are (or your location), then Route from this place.
     app.card({ student: "left", studentOrder: 1, id: "guide-card", title: "Get me to safety", order: 20, html: `
@@ -118,7 +118,7 @@ const feature: Feature = {
 
     const q = $<HTMLInputElement>("place-q"), results = $("place-results");
     $("btn-guide").onclick = () => void (start ? run() : locateAndRun());
-    $("btn-pick").onclick = () => app.pick("Click the map where you are", (pt: Pt) => { setStart({ name: "Pinned location", ...pt }); void run(); });
+    $("btn-pick").onclick = () => app.pick(`${TAP} the map where you are`, (pt: Pt) => { setStart({ name: "Pinned location", ...pt }); void run(); });
     $("btn-replay").onclick = () => {
       readOn = !readOn;
       const b = $("btn-replay");
@@ -246,7 +246,7 @@ const feature: Feature = {
         $("guide-out").hidden = true;
       }
       start = s;
-      app.hint(`From: ${s.name} · click a road for its status`);
+      app.hint(`From: ${s.name} · ${TAP.toLowerCase()} a road for its status`);
       q.value = shownName(s);
       $("btn-guide").hidden = true;   // a start is set: routes plan as soon as it changes
       marker?.remove();

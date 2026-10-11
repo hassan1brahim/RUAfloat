@@ -5,7 +5,7 @@
 body.m { height: 100dvh; overflow: hidden; padding-bottom: 0; overscroll-behavior: none; }   /* only the map moves: no page bounce or pull-to-refresh while panning */
 
 /* header: logo, name, Live/What-if on one row; the status line under it; the view switch moves to the bottom bar */
-body.m .top { grid-template-columns: 1fr; gap: 4px; padding: 8px max(12px, env(safe-area-inset-left)); }
+body.m .top { grid-template-columns: 1fr; gap: 4px; padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left)); }
 body.m .top-center { display: none; }
 body.m .top-left { gap: 10px; }
 body.m .top-right { justify-self: stretch; align-items: flex-start; text-align: left; font-size: 12px; }
@@ -15,12 +15,17 @@ body.m .whatif-bar { display: none; }
 body.m .layout { flex: 1; min-height: 0; display: block; position: relative; height: auto; }
 body.m .mapwrap { position: absolute; inset: 0; height: auto; min-height: 0; }
 body.m .maplibregl-ctrl-bottom-right, body.m .maplibregl-ctrl-bottom-left { bottom: calc(var(--nav-h) + var(--peek-h)); }
+/* Student: lift the zoom buttons above "Route me to safety" so it doesn't cover them */
+body.m[data-view="student"][data-sheet="peek"] .maplibregl-ctrl-bottom-right { bottom: calc(var(--nav-h) + var(--peek-h) + 66px); }
 
 /* Layers and Legend: two small buttons that open on tap */
 body.m .map-layers { top: 8px; right: 8px; bottom: auto; left: auto; padding: 6px 10px; }
 body.m .legend { top: 60px; right: 8px; bottom: auto; left: auto; max-width: calc(100% - 16px); padding: 6px 10px; }
 body.m .map-layers[open], body.m .legend[open] { max-height: 34dvh; overflow: auto; z-index: 5; }
-body.m .map-hint { top: auto; bottom: calc(var(--nav-h) + var(--peek-h) + 72px); left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the hint sits top-left, clear of Layers/Legend (top-right) and the zoom buttons (bottom-right); it wraps instead of being cut off */
+body.m .map-hint { top: 8px; bottom: auto; left: 8px; right: auto; transform: none; max-width: calc(100% - 112px); white-space: normal; font-size: 12px; line-height: 1.3; }
+/* Admin: the Live / What-if switch takes the top-left corner, so the hint goes just under it */
+body.m[data-view="admin"] .map-hint { top: 62px; }
 
 /* main action above the panel: Route me to safety (Student) */
 body.m .go-fab { display: block; position: fixed; left: 12px; right: 12px; bottom: calc(var(--nav-h) + var(--peek-h) + 10px); z-index: 50; min-height: 52px; font-size: 16px; box-shadow: 0 6px 24px rgba(0, 0, 0, .5); }

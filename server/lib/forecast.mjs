@@ -4,6 +4,7 @@
 import fs from "node:fs";
 
 import { UA } from "./http.mjs";
+import { cleanObserved } from "./gauge.mjs";
 
 export function createForecast({ modelFile }) {
   const file = modelFile;
@@ -44,7 +45,7 @@ export function createForecast({ modelFile }) {
     const series = Object.fromEntries(await Promise.all(lids.map(async (lid) => {
       const r = await fetch(`https://api.water.noaa.gov/nwps/v1/gauges/${lid}/stageflow`, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(15000) });
       const d = r.ok ? await r.json() : null;
-      return [lid, (d?.observed?.data ?? []).filter((p) => p.primary > -999).map((p) => [p.validTime, p.primary])];
+      return [lid, cleanObserved(d?.observed?.data ?? []).map((p) => [p.validTime, p.primary])];
     })));
     const latest = Math.min(...lids.map((lid) => Date.parse(series[lid].at(-1)?.[0] ?? 0)));
     const now = Math.floor(latest / 3600e3) * 3600e3;          // last hour every gauge has reported

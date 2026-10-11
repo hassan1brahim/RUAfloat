@@ -1,5 +1,6 @@
 // River feature: Raritan gauge at Bound Brook (NWS NWPS) + active NWS alerts for New Brunswick.
 import { cached, getJson, send } from "../lib/http.mjs";
+import { cleanObserved } from "../lib/gauge.mjs";
 
 export async function live() {
   return cached("live", 60_000, async () => {
@@ -10,12 +11,17 @@ export async function live() {
         getJson("https://api.water.noaa.gov/nwps/v1/gauges/BDKN4/stageflow"),
       ]);
       const cutoff = Date.now() - 48 * 3600e3;
+      const obs = cleanObserved(sf.observed.data);
+      // the headline reading comes from the same feed; if it was a glitch, use the last good reading instead
+      const last = obs[obs.length - 1], st = meta.status.observed;
+      const observed = last && (st.validTime !== last.validTime || st.primary !== last.primary) && !obs.some((d) => d.validTime === st.validTime)
+        ? { ...st, primary: last.primary, validTime: last.validTime } : st;
       out.gauge = {
         name: meta.name, lid: meta.lid, usgsId: meta.usgsId,
-        observed: meta.status.observed, forecast: meta.status.forecast, categories: meta.flood.categories,
+        observed, forecast: meta.status.forecast, categories: meta.flood.categories,
         impacts: meta.flood.impacts.map((i) => ({ stage: i.stage, statement: i.statement.trim() })),
         crests: meta.flood.crests.historic.slice(0, 5).map((c) => ({ time: c.occurredTime, stage: c.stage })),
-        series: sf.observed.data.filter((d) => Date.parse(d.validTime) >= cutoff).map((d) => [d.validTime, d.primary]),
+        series: obs.filter((d) => Date.parse(d.validTime) >= cutoff).map((d) => [d.validTime, d.primary]),
         forecastSeries: (sf.forecast?.data || []).map((d) => [d.validTime, d.primary]),
         forecastIssued: sf.forecast?.data?.[0]?.generatedTime ?? null,
       };

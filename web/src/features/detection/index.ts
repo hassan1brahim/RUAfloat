@@ -1,6 +1,6 @@
 /** Ground truth: USGS river cameras + AI check, student photo reports, street water sensors. Live mode only. */
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
-import type { Feature, Pt } from "../../core/app";
+import { TAP, type Feature, type Pt } from "../../core/app";
 import { $, esc, et, getJson, postJson } from "../../core/util";
 import { observe, shrinkPhoto, type Camera, type CameraCheck, type Report, type ReportStatus, type Sensor } from "./observe";
 import "./style.css";
@@ -56,7 +56,7 @@ const feature: Feature = {
       ready();
     };
     photo.onchange = ready;
-    $("r-pick").onclick = () => app.pick("Click the map where the flooding is", (pt) => setLoc("Pinned on map", pt));
+    $("r-pick").onclick = () => app.pick(`${TAP} the map where the flooding is`, (pt) => setLoc("Pinned on map", pt));
     $("r-gps").onclick = async () => {
       $("r-loc").textContent = "Finding your location…";
       const f = await bestPosition();

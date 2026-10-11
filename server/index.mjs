@@ -4,6 +4,7 @@ import "./env.mjs";   // first: .env must be loaded before other modules read pr
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { send } from "./lib/http.mjs";
 import { GEMINI_KEY, GEMINI_MODEL } from "./lib/gemini.mjs";
@@ -23,6 +24,26 @@ export const ctx = {
   liveData: path.join(ROOT, "data/live"),        // reports, photos
   health: { ok: true, gemini: !!GEMINI_KEY, elevenlabs: !!process.env.ELEVENLABS_API_KEY, model: GEMINI_MODEL },
 };
+
+// Static files, phone-friendly: the flood grid and road network are ~13 MB raw but ~1.8 MB gzipped, so compress
+// once per file (kept in memory), let browsers revalidate with an ETag, and cache Vite's hashed /assets forever.
+const COMPRESS = new Set([".html", ".js", ".css", ".json", ".bin", ".svg"]);
+const gzCache = new Map();   // file -> { tag, gz }
+function serveStatic(req, res, file, pathname) {
+  const st = fs.statSync(file), ext = path.extname(file), tag = `"${st.size.toString(36)}-${st.mtimeMs.toString(36)}"`;
+  const cache = pathname.startsWith("/assets/") ? "public, max-age=31536000, immutable"
+    : ext === ".html" ? "no-cache" : "public, max-age=600";
+  const headers = { "Content-Type": MIME[ext] || "application/octet-stream", "Cache-Control": cache, ETag: tag, Vary: "Accept-Encoding" };
+  if (req.headers["if-none-match"] === tag) { res.writeHead(304, headers); return res.end(); }
+  if (COMPRESS.has(ext) && st.size > 1024 && /\bgzip\b/.test(req.headers["accept-encoding"] || "")) {
+    let c = gzCache.get(file);
+    if (!c || c.tag !== tag) gzCache.set(file, (c = { tag, gz: zlib.gzipSync(fs.readFileSync(file), { level: 6 }) }));
+    res.writeHead(200, { ...headers, "Content-Encoding": "gzip", "Content-Length": c.gz.length });
+    return res.end(c.gz);
+  }
+  res.writeHead(200, { ...headers, "Content-Length": st.size });
+  fs.createReadStream(file).pipe(res);
+}
 
 const table = [];
 const api = {
@@ -45,8 +66,7 @@ export const server = http.createServer(async (req, res) => {
       let file = path.normalize(path.join(dist, url.pathname));
       if (file !== dist && !file.startsWith(dist + path.sep)) return send(res, 403, { error: "forbidden" });
       if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(dist, "index.html");
-      res.writeHead(200, { "Content-Type": MIME[path.extname(file)] || "application/octet-stream" });
-      return fs.createReadStream(file).pipe(res);
+      return serveStatic(req, res, file, url.pathname);
     }
     send(res, 404, { error: "not found" });
   } catch (e) {

@@ -6,11 +6,25 @@
   <meta name="theme-color" content="#080c11" />
   <link rel="icon" type="image/svg+xml" href="/logo.svg" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="RU Afloat" />
+  <style>
+    /* shown until the app is ready, so a phone on slow data never sees a half-built page */
+    #boot { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+      background: #080c11; color: #94a3b8; font: 500 15px Inter, system-ui, sans-serif; transition: opacity .25s; }
+    #boot b { color: #f1f5f9; font-size: 22px; }
+    #boot.done { opacity: 0; pointer-events: none; }
+  </style>
   <title>RU Afloat · Raritan Flood Command</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 </head>
 <body>
+  <script>if (matchMedia("(max-width: 1000px)").matches) document.body.classList.add("m");</script>
+  <div id="boot" role="status"><img src="/logo.svg" width="72" height="72" alt="" /><b>RU Afloat</b><span>Loading flood data…</span></div>
+  <script>setTimeout(() => document.getElementById("boot")?.classList.add("done"), 30000);   // never trap someone behind the loading screen</script>
   <header class="top">
     <div class="top-left">
       <div class="brand">
@@ -33,7 +47,7 @@
       <div id="map"></div>
       <details class="map-layers card" id="layers-box" open><summary>Layers</summary><div id="map-layers" class="layer-list"></div></details>
       <details class="legend card" id="legend-box" open><summary>Legend</summary><div id="legend" class="legend-grid"></div></details>
-      <div class="map-hint" id="map-hint" aria-live="polite">Click a road for its status</div>
+      <div class="map-hint" id="map-hint" aria-live="polite"></div>
     </section>
     <aside class="col right" id="col-right" aria-label="Where to go and reports"></aside>
   </main>

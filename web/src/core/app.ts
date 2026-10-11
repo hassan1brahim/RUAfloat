@@ -5,6 +5,9 @@
 import maplibregl, { type Map as MLMap, type MapMouseEvent } from "maplibre-gl";
 import { BASE_FT, riseDmOf, $ } from "./util";
 
+/** "Tap" on touch screens, "Click" with a mouse. */
+export const TAP = matchMedia("(pointer: coarse)").matches ? "Tap" : "Click";
+
 export type Mode = "live" | "ida" | "whatif";
 export type View = "student" | "admin";
 export type Pt = { lon: number; lat: number };
@@ -45,7 +48,7 @@ export class App {
   private picking: ((pt: Pt) => void) | null = null;
   private pending = 0;
   private started = false;   // no redraws until every feature has initialised
-  private defaultHint = "Click a road for its status";
+  private defaultHint = `${TAP} a road for its status`;
   private keyOn = new Map<string, boolean>();
 
   constructor(private features: Feature[]) {}
@@ -178,6 +181,7 @@ export class App {
 
   async start(createMap: () => Promise<MLMap>) {
     document.body.dataset.view = this.state.view;
+    this.hint();
     document.querySelectorAll<HTMLButtonElement>("#view-seg button").forEach((b) => (b.onclick = () => this.setView(b.dataset.view as View)));
     this.map = await createMap();
     for (const f of this.features) await f.init(this);
@@ -201,5 +205,7 @@ export class App {
     this.update();
     if (import.meta.env.DEV) (window as unknown as { __rudc: object }).__rudc = { app: this, map: this.map };
     (window as unknown as { __ready: boolean }).__ready = true;
+    const boot = document.getElementById("boot");
+    if (boot) { boot.classList.add("done"); setTimeout(() => boot.remove(), 300); }
   }
 }
