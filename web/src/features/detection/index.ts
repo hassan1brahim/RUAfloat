@@ -136,10 +136,11 @@ function popupHtml(p: { kind: string; id: string }) {
     const s = sensors.find((x) => x.id === p.id)!;
     return `<b>📡 ${s.name}</b><br>${s.reading ? `${s.reading.depth_cm} cm of water · ${et(s.reading.time)}${s.stale ? " (stale)" : ""}` : "No readings yet"}<br><span class="muted">${esc(s.road)}</span>`;
   }
-  const r = reports.find((x) => x.id === p.id)!, st = statuses.get(r.id), dc = r.ai.depth_cm;
-  return `<b>Student report · ${et(r.time)}</b><br><img src="/api/reports/${esc(r.id)}/photo" alt="Reported flooding photo" style="width:100%;border-radius:6px;margin:6px 0">
+  const r = reports.find((x) => x.id === p.id)!, dc = r.ai.depth_cm;
+  const st = statuses.get(r.id) ?? (r.ai.water_on_ground ? { status: "sent", why: "sent to the coordinator to confirm" } : { status: "rejected", why: "no water visible in the photo" });
+  return `${r.ai.water_on_ground ? `<div class="badge bad" style="font-size:14px;margin-bottom:6px">💧 Water detected${dc ? ` · ${dc[0]}–${dc[1]} cm deep` : ""}</div><br>` : ""}<b>Student report · ${et(r.time)}</b><br><img src="/api/reports/${esc(r.id)}/photo" alt="Reported flooding photo" style="width:100%;border-radius:6px;margin:6px 0">
     ${r.note ? `“${esc(r.note)}”<br>` : ""}AI (${esc(r.model)}): ${r.ai.water_on_ground ? `water, ${dc ? `${dc[0]}–${dc[1]} cm` : "depth unclear"}` : "no water seen"}${r.ai.depth_reference ? ` · ref: ${esc(r.ai.depth_reference)}` : ""}<br>
-    <b>${st?.status ?? "?"}</b>: ${esc(st?.why)}`;
+    <b>${st.status}</b>: ${esc(st.why)}`;
 }
 
 /** One health line per sensor; the depth sparkline only once there is something to draw. */

@@ -167,6 +167,11 @@ const feature: Feature = {
       err.textContent = "";
       await load(app);
       app.refresh();   // routing and the map pick up the decision
+      // confirmed: straight to the unit picker for that spot, nearest unit preselected, so dispatch is one tap
+      if (verdict === "confirmed") {
+        void openPicker({ kind: "road", target: `Flooded street, student photo ${when(item.time)}`, lon: item.lon, lat: item.lat });
+        $("adm-disp-card").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
     });
     $("adm-disp-form").addEventListener("click", async (e) => {
       const t = e.target as HTMLElement;

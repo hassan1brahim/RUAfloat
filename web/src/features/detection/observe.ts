@@ -44,7 +44,7 @@ export function reportStatus(r: Report, all: Report[], grid: FloodGrid, riseDm: 
     && Math.abs(Date.parse(o.time) - Date.parse(r.time)) < REPORT_FRESH_MS).map((o) => o.hash)).size;
   const support = [modelWet && "model predicts water here", neighbors && `${neighbors} nearby report${neighbors > 1 ? "s" : ""} agree`].filter(Boolean).join(", ");
   if (deep && support) return { status: "confirmed", why: support };
-  return { status: "unconfirmed", why: !deep ? "photo shows shallow water" : "no second source yet (model dry here, no nearby reports)" };
+  return { status: "unconfirmed", why: !deep ? "photo shows shallow water" : "deep water: sent to the coordinator to confirm" };
 }
 
 /** Road segments closed by observations, plus the evidence attached to each segment. */
