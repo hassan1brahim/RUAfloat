@@ -347,7 +347,7 @@ const feature: Feature = {
         p.coords.forEach((c) => b.extend(c));
         app.map.fitBounds(b, { padding: 90, maxZoom: 16, duration: 900 });
       }
-      const scenario = app.state.mode === "live" ? "live river reading" : app.state.mode === "ida" ? "Hurricane Ida 2021 replay" : `what-if, ${fmtFt(app.state.stageFt)} at Bound Brook`;
+      const scenario = app.state.mode === "live" ? "live river reading" : app.state.mode === "ida" ? `${app.get("river").ida.what} replay` : `what-if, ${fmtFt(app.state.stageFt)} at Bound Brook`;
       const payload = p
         ? { start: s.name, dest: p.dest.name, meters: p.meters, minutes: p.minutes, steps: p.steps, avoid: p.avoid, scenario }
         : { start: s.name === "Pinned location" ? "your location" : s.name, shelter_in_place: true, steps: [], avoid: [], scenario };

@@ -28,7 +28,7 @@ let closedKey = "", shownKey = "";
 /** Which Ida moment is on screen: the river's Ida replay, or the What-if Ida forecast simulation. */
 function syncIda(app: App) {
   const river = app.maybe("river"), clock = app.maybe("simClock")?.();
-  idaT = app.state.mode === "ida" && river ? Date.parse(river.ida.series[river.idaIndex()][0])
+  idaT = app.state.mode === "ida" && river && river.ida.id === "ida" ? Date.parse(river.ida.series[river.idaIndex()][0])
     : clock?.kind === "ida" ? clock.t : null;
 }
 

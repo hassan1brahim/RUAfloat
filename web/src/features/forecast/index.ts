@@ -37,7 +37,9 @@ const feature: Feature = {
     el.hidden = app.state.mode === "whatif";
     if (el.hidden) return;
     if (app.state.mode === "ida") {
-      const river = app.get("river"), t = river.ida.series[river.idaIndex()][0].slice(0, 13);
+      const river = app.get("river");
+      if (river.ida.id !== "ida") { el.innerHTML = `<span class="muted">Our ML forecast check covers Ida 2021 only.</span>`; return; }
+      const t = river.ida.series[river.idaIndex()][0].slice(0, 13);
       const r = ida?.find((x) => x.t.slice(0, 13) === t);
       const hs = Object.keys(r?.pred ?? {}).map((k) => parseInt(k));
       if (!r) { el.innerHTML = `<span class="muted">ML forecast for this hour not available.</span>`; return; }

@@ -1,5 +1,6 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./core/base.css";
+import "./lib/demo-location";
 import { App } from "./core/app";
 import { createMap } from "./core/map";
 import { FEATURES } from "./features/registry";

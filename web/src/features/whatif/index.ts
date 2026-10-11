@@ -70,7 +70,7 @@ function liveTimeline(app: App): Point[] | null {
 }
 
 function idaTimeline(app: App): Point[] {
-  const h = idaHours[idaIssue], series = app.get("river").ida.series;
+  const h = idaHours[idaIssue], series = idaSeries(app);
   const actual = (t: number) => { const p = series.find(([s]) => Math.abs(Date.parse(s) - t) < 1800e3); return p ? p[1] : null; };
   return buildTimeline({ start: Date.parse(h.t), nowFt: h.now, ml: Object.keys(h.pred).map((k) => ({ h: parseInt(k), ft: h.pred[k] })), err: errOf(ml), hours: Math.max(...Object.keys(h.pred).map((k) => parseInt(k))), actual });
 }
@@ -150,7 +150,7 @@ around <b>${et(new Date(c.at).toISOString())}</b> (in ~${hoursFrom(start, c.at)}
 }
 
 function renderIdaSummary(app: App) {
-  const series = app.get("river").ida.series, box = $("wf-ida");
+  const series = idaSeries(app), box = $("wf-ida");
   if (view !== "ida") { box.hidden = true; return; }
   box.hidden = false;
   const warned = items.filter((i) => i.kind === "road").map((i) => ({ i, w: idaWarning(idaHours, series, i.closeFt) }))
@@ -168,7 +168,7 @@ function recompute(app: App) {
   stop();
   if (view === "forecast") timeline = liveTimeline(app) ?? [];
   if (view === "ida") timeline = idaHours.length ? idaTimeline(app) : [];
-  const series = app.get("river").ida.series;
+  const series = idaSeries(app);
   result = timeline.length ? closures(timeline, items, view === "ida" ? (ft) => firstReach(series, ft) : undefined) : { upcoming: [], already: [] };
   idx = 0; pos = 0; prevFt = null; toasts.length = 0; hudToastKey = "";
   if (view !== "level" && timeline.length) {
@@ -332,6 +332,9 @@ function spoken(app: App) {
   const first = roads.slice(0, 4).map((c) => `${c.name} ${c.confidence === "likely" ? "" : "may close "}${c.confidence === "likely" ? "closes" : ""} in about ${hrs(hoursFrom(timeline[0].t, c.at))}`.replace(/\s+/g, " ")).join(", ");
   return `${peak} ${roads.length} road${roads.length === 1 ? "" : "s"} are forecast to flood. First: ${first}.`;
 }
+
+/** Sanah's look-back is about Ida specifically, whichever flood the replay is showing. */
+const idaSeries = (app: App) => { const r = app.get("river"); return (r.floods.find((f) => f.id === "ida") ?? r.ida).series; };
 
 const feature: Feature = {
   id: "whatif",

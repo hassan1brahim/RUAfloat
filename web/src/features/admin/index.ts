@@ -41,7 +41,7 @@ function dispatchCell(kind: "road" | "building", name: string, lon: number | nul
 function query(app: App) {
   const q = new URLSearchParams({ mode: app.state.mode });
   const river = app.maybe("river");
-  if (app.state.mode === "ida" && river) q.set("t", river.ida.series[river.idaIndex()][0].slice(0, 13));
+  if (app.state.mode === "ida" && river) { q.set("flood", river.ida.id); q.set("t", river.ida.series[river.idaIndex()][0].slice(0, 13)); }
   if (app.state.mode === "whatif") q.set("stage", app.state.stageFt.toFixed(1));
   return q;
 }

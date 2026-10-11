@@ -1,4 +1,4 @@
-/** River: live Bound Brook gauge (NWS), alerts, and the three scenarios (Live, Ida 2021 replay, What-if). */
+/** River: live Bound Brook gauge (NWS), alerts, and the scenarios (Live, a replay of a real flood, What-if). */
 import type { App, Feature, Mode } from "../../core/app";
 import { $, CATS, catOf, esc, et, fmtFt, getJson } from "../../core/util";
 import "./style.css";
@@ -12,9 +12,14 @@ export type Live = {
   alerts_error?: string;
   sources: { name: string; url: string }[];
 };
-export type Ida = { series: [string, number][]; crest: [string, number]; baseline_ft: number };
+/** A real flood at Bound Brook, hourly (floods.json, from USGS). The replay mode is still called "ida" in code. */
+export type Flood = { id: string; short: string; name: string; year: number; what: string; series: [string, number][]; crest: [string, number] };
+export type Ida = Flood;
 export type River = {
+  /** the flood being replayed (a getter: it changes when another flood is picked) */
   ida: Ida;
+  floods: Flood[];
+  setFlood: (id: string) => void;
   live: () => Live | null;
   idaIndex: () => number;
   setIdaIndex: (i: number) => void;
@@ -28,7 +33,10 @@ const PRESETS = [
   { label: "Irene 2011 · 41.9", ft: 41.9 }, { label: "Ida 2021 / Floyd 1999 · 42.13", ft: 42.13 },
 ];
 
-let ida: Ida, live: Live | null = null, idaIdx = 0, playing = 0, app: App;
+let ida: Ida, floods: Flood[] = [], live: Live | null = null, idaIdx = 0, playing = 0, app: App;
+
+/** Start a replay ~10 hours before the crest: the rise is the interesting part. */
+const startIdx = () => Math.max(0, ida.series.findIndex((p) => p[0] >= ida.crest[0].slice(0, 13)) - 10);
 
 type Tab = "ida" | "manual";
 let tab: Tab = "ida";
@@ -40,7 +48,7 @@ function setMode(m: Mode) {
   else if (m === "whatif" && tab === "ida") tab = "manual";
   syncUi();
   if (m === "live") applyLive();
-  if (m === "ida") { if (!idaIdx) idaIdx = ida.series.findIndex((p) => p[0] >= "2021-09-02T06"); applyIda(); }
+  if (m === "ida") { if (!idaIdx) idaIdx = startIdx(); applyIda(); }
   if (m === "whatif") app.setStage(+$<HTMLInputElement>("stage-slider").value);
 }
 
@@ -84,8 +92,8 @@ function applyIda() {
   const [t, ft] = ida.series[idaIdx];
   $<HTMLInputElement>("ida-scrub").value = String(idaIdx);
   const hour = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
-  $("ida-label").textContent = `${et(t)} · crest 42.13 ft at ${hour(ida.crest[0])} ET`;
-  $("g-note").textContent = `Ida 2021 replay · ${et(t)} ET · white dot = this hour`;
+  $("ida-label").textContent = `${et(t)} · crest ${ida.crest[1]} ft at ${hour(ida.crest[0])} ET`;
+  $("g-note").textContent = `${ida.short} replay · ${et(t)} ET · white dot = this hour`;
   drawSpark(ida.series, idaIdx, []);
   app.setStage(ft);
 }
@@ -145,7 +153,8 @@ const feature: Feature = {
   id: "river",
   async init(a) {
     app = a;
-    ida = await getJson<Ida>("/data/ida.json");
+    floods = await getJson<Flood[]>("/data/floods.json");
+    ida = floods.find((f) => f.id === "ida") ?? floods[0];
     const head = document.createElement("span");
     head.innerHTML = `<span id="top-time" class="muted mono"></span><span id="top-stage" class="mono">--.- ft</span> <span id="top-cat" class="cat">--</span>`;
     head.className = "top-river";
@@ -165,9 +174,10 @@ const feature: Feature = {
     app.mapOverlay(modeCtl);
     $("whatif-bar").innerHTML = `
       <span class="tag">WHAT-IF</span>
-      <div class="seg" id="wi-tabs"><button data-tab="ida">Ida 2021 replay</button><button data-tab="manual">Manual</button></div>
+      <div class="seg" id="wi-tabs"><button data-tab="ida">Real floods</button><button data-tab="manual">Manual</button></div>
       <div class="wi-pane" id="ida-ctl" hidden>
-        <button id="ida-play" class="btn small">▶ Play</button><input id="ida-scrub" type="range" min="0" max="0" value="0" aria-label="Ida replay hour" />
+        <select id="flood-pick" class="flood-pick" aria-label="Flood to replay">${floods.map((f) => `<option value="${f.id}">${esc(f.short)} · ${f.crest[1]} ft</option>`).join("")}</select>
+        <button id="ida-play" class="btn small">▶ Play</button><input id="ida-scrub" type="range" min="0" max="0" value="0" aria-label="Replay hour" />
         <span class="small" id="ida-label"></span>
       </div>
       <div class="wi-pane" id="whatif-ctl" hidden>
@@ -194,6 +204,19 @@ const feature: Feature = {
     $("wi-live").onclick = () => setMode("live");
     const scrub = $<HTMLInputElement>("ida-scrub");
     scrub.max = String(ida.series.length - 1);
+    const pick = $<HTMLSelectElement>("flood-pick");
+    pick.value = ida.id;
+    /** Another real flood: same controls, its own hours, starting ~10 h before its crest. */
+    const setFlood = (id: string) => {
+      const f = floods.find((x) => x.id === id);
+      if (!f) return;
+      if (playing) togglePlay();
+      ida = f; pick.value = f.id;
+      scrub.max = String(ida.series.length - 1);
+      idaIdx = startIdx();
+      if (app.state.mode === "ida") applyIda(); else setTab("ida");
+    };
+    pick.onchange = () => setFlood(pick.value);
     scrub.oninput = () => { idaIdx = +scrub.value; applyIda(); };
     $("ida-play").onclick = togglePlay;
     const slider = $<HTMLInputElement>("stage-slider");
@@ -205,7 +228,7 @@ const feature: Feature = {
       $("presets").append(c);
     }
     app.provide("river", {
-      ida, live: () => live, idaIndex: () => idaIdx,
+      get ida() { return ida; }, floods, setFlood, live: () => live, idaIndex: () => idaIdx,
       setIdaIndex: (i) => { idaIdx = i; if (app.state.mode === "ida") applyIda(); },
       setMode, setWhatIf: (ft) => { slider.value = String(ft); tab = "manual"; if (app.state.mode === "whatif") app.setStage(ft); },
     });
@@ -234,7 +257,7 @@ const feature: Feature = {
     const g = live?.gauge;
     const peak = g?.forecastSeries.reduce((m, p) => (p[1] > m[1] ? p : m), ["", -1] as [string, number]);
     return {
-      scenario: a.state.mode === "live" ? "live" : a.state.mode === "ida" ? "Hurricane Ida 2021 replay" : "what-if",
+      scenario: a.state.mode === "live" ? "live" : a.state.mode === "ida" ? `${ida.what} replay` : "what-if",
       river_level_ft: +a.state.stageFt.toFixed(1), flood_category: catOf(a.state.stageFt), flood_stage_ft: 28,
       forecast_peak: a.state.mode === "live" && peak?.[0] ? { ft: +peak[1].toFixed(1), at: et(peak[0]) } : null,
       nws_alerts: a.state.mode === "live" ? (live?.alerts ?? []).map((x) => x.event) : [],

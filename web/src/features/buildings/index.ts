@@ -55,7 +55,7 @@ const feature: Feature = {
     (app.map.getSource("rutgers") as GeoJSONSource).setData(geojson(rise));
     // air quality: replay only, station local time
     const card = $("air-card"), river = app.maybe("river");
-    card.hidden = app.state.mode !== "ida" || !river;
+    card.hidden = app.state.mode !== "ida" || !river || river.ida.id !== "ida";   // the PAMS air record is for Ida only
     if (card.hidden || !river) return;
     const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" })
       .formatToParts(new Date(river.ida.series[river.idaIndex()][0])).map((x) => [x.type, x.value]));

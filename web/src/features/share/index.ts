@@ -10,6 +10,7 @@ const feature: Feature = {
     const q = app.params, river = app.get("river");
     const sc = q.get("scenario") as Mode | null;
     if (sc === "ida") {
+      if (q.get("flood")) river.setFlood(q.get("flood")!);
       const t = q.get("t"), s = river.ida.series;
       const i = t ? s.findIndex((p) => p[0] >= t) : s.findIndex((p) => p[0] === river.ida.crest[0].slice(0, 19) + "+00:00");
       river.setIdaIndex(i >= 0 ? i : s.reduce((b, p, k) => (p[1] > s[b][1] ? k : b), 0));
@@ -28,7 +29,7 @@ const feature: Feature = {
     const q = new URLSearchParams(), river = app.get("river");
     if (app.state.view === "admin") q.set("view", "admin");
     q.set("scenario", app.state.mode);
-    if (app.state.mode === "ida") q.set("t", river.ida.series[river.idaIndex()][0].slice(0, 13));
+    if (app.state.mode === "ida") { q.set("flood", river.ida.id); q.set("t", river.ida.series[river.idaIndex()][0].slice(0, 13)); }
     if (app.state.mode === "whatif") q.set("stage", app.state.stageFt.toFixed(1));
     const start = app.maybe("guide")?.start();
     if (start && start.name !== "Pinned location" && start.name !== "Your location") q.set("from", start.name);

@@ -37,3 +37,4 @@
 .lvl-labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .impacts-box { margin-top: 8px; font-size: 12px; }
 .impacts-box summary { cursor: pointer; color: var(--muted); }
+.flood-pick { width: auto; margin: 0; padding: 6px 8px; background: #1a1230; border-color: #3b2a63; color: #ede9fe; font-weight: 600; }

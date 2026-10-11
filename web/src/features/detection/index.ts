@@ -34,7 +34,7 @@ const feature: Feature = {
       <div class="row gap"><button id="r-pick" class="btn ghost small"><span aria-hidden="true">📍</span> Pick on map</button><button id="r-gps" class="btn ghost small"><span aria-hidden="true">◎</span> GPS</button></div>
       <input id="r-photo" type="file" accept="image/*" capture="environment" aria-label="Photo of the flooding" />
       <textarea id="r-note" rows="2" maxlength="280" placeholder="What do you see? (optional)" aria-label="Note"></textarea>
-      <button id="r-send" class="btn primary" disabled>Send report</button><div id="r-out" class="small"></div>` });
+      <button id="r-send" class="btn primary">Send report</button><div id="r-out" class="small"></div>` });
 
     // The observations contract from the roads feature: closures that routing and the road panel use.
     app.provide("observations", () => {
@@ -45,7 +45,9 @@ const feature: Feature = {
     });
 
     const send = $<HTMLButtonElement>("r-send"), photo = $<HTMLInputElement>("r-photo");
-    const ready = () => (send.disabled = !(reportLoc && photo.files?.length));
+    // Send stays clickable and says what's missing, instead of greying out with no reason.
+    const missing = () => !photo.files?.length ? "Add a photo first." : !reportLoc ? "Now add where it is: tap Pick on map or GPS." : "";
+    const ready = () => { send.disabled = false; const m = missing(); $("r-out").innerHTML = m && photo.files?.length ? `<span class="badge warn">${m}</span>` : ""; };
     const setLoc = (name: string, pt: Pt) => {
       reportLoc = pt;
       $("r-loc").textContent = `Location: ${name} (${pt.lat.toFixed(5)}, ${pt.lon.toFixed(5)})`;
@@ -62,6 +64,8 @@ const feature: Feature = {
       else $("r-loc").textContent = locateError || "Couldn't get your location: use Pick on map.";
     };
     send.onclick = async () => {
+      const m = missing();
+      if (m) { $("r-out").innerHTML = `<span class="badge warn">${m}</span>`; (reportLoc ? photo : $("r-pick")).focus(); return; }
       send.disabled = true; send.textContent = "Checking photo…";
       try {
         const r = await postJson<Report & { error?: string }>("/api/reports", { lat: reportLoc!.lat, lon: reportLoc!.lon, note: $<HTMLTextAreaElement>("r-note").value, photo: await shrinkPhoto(photo.files![0]) });
@@ -70,7 +74,7 @@ const feature: Feature = {
         $("r-out").innerHTML = popupHtml({ kind: "report", id: r.id });
         photo.value = ""; $<HTMLTextAreaElement>("r-note").value = "";
       } catch (e) { $("r-out").innerHTML = `<span class="badge warn">${esc((e as Error).message)}</span>`; }
-      send.textContent = "Send report"; ready();
+      send.textContent = "Send report"; send.disabled = false;   // keep the result or error visible
     };
 
     async function refresh(force = false) {

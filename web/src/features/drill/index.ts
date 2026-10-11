@@ -19,7 +19,7 @@ const feature: Feature = {
   },
   update(app) {
     const river = app.maybe("river"), m = app.state.mode;
-    const text = m === "ida" && river ? `DRILL · Ida 2021 · ${et(river.ida.series[river.idaIndex()][0])}` : m === "whatif" ? `DRILL · ${app.state.stageFt.toFixed(1)} ft what-if` : "";
+    const text = m === "ida" && river ? `DRILL · ${river.ida.short} · ${et(river.ida.series[river.idaIndex()][0])}` : m === "whatif" ? `DRILL · ${app.state.stageFt.toFixed(1)} ft what-if` : "";
     if (text === shown) return;
     shown = text;
     $("drill-tag").textContent = text;

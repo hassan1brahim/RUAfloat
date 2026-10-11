@@ -10,7 +10,7 @@ export const NB_LOW = 0.87;
 export function roadPanel(o: {
   ei: number; router: Router; grid: FloodGrid; riseDm: number; stageFt: number; baseFt: number;
   mode: "live" | "ida" | "whatif"; forecast: [string, number][]; forecastIssued: string | null; observedAt: string | null;
-  ida: [string, number][]; evidence: Evidence[]; observedClosed: boolean; onRoute: boolean; noaa: string[] | null;
+  ida: [string, number][]; floodName: string; evidence: Evidence[]; observedClosed: boolean; onRoute: boolean; noaa: string[] | null;
 }) {
   const e = o.router.edge(o.ei);
   const name = o.router.edgeName(o.ei);
@@ -36,7 +36,7 @@ export function roadPanel(o: {
       : `Closes at ≥ ${closeFt.toFixed(1)} ft. Not reached in the current NWS forecast${peak[0] ? ` (peak ${peak[1].toFixed(1)} ft, ${et(peak[0])})` : ""}.`;
   } else if (o.mode === "ida") {
     const hit = o.ida.find((p) => p[1] >= closeFt);
-    onset = hit ? `During Ida the river passed ${closeFt.toFixed(1)} ft at <b>${et(hit[0])}</b>.` : `Closes at ≥ ${closeFt.toFixed(1)} ft; Ida never got there.`;
+    onset = hit ? `During ${o.floodName} the river passed ${closeFt.toFixed(1)} ft at <b>${et(hit[0])}</b>.` : `Closes at ≥ ${closeFt.toFixed(1)} ft; ${o.floodName} never got there.`;
   } else onset = `Closes when Bound Brook reaches ≥ ${closeFt.toFixed(1)} ft.`;
 
   // New Brunswick likely rises less than Bound Brook: NOAA's cross-sections show -13% within 13 km.
@@ -50,7 +50,7 @@ export function roadPanel(o: {
       + `<br><span class="muted">First water at ${wetFt?.toFixed(1)} ft · closed to walking (10–15 cm) at ${closeFt.toFixed(1)} ft · to vehicles (30 cm) at ${vehFt?.toFixed(1)} ft</span>`;
 
   const evidence = [
-    `River: ${o.stageFt.toFixed(1)} ft at Bound Brook (${o.mode === "live" ? `NWS/USGS, observed ${o.observedAt ? et(o.observedAt) : "n/a"}` : o.mode === "ida" ? "USGS record, Ida 2021" : "what-if"})`,
+    `River: ${o.stageFt.toFixed(1)} ft at Bound Brook (${o.mode === "live" ? `NWS/USGS, observed ${o.observedAt ? et(o.observedAt) : "n/a"}` : o.mode === "ida" ? `USGS record, ${o.floodName}` : "what-if"})`,
     o.mode === "live" && o.forecastIssued ? `NWS forecast issued ${et(o.forecastIssued)}` : "",
     "Model: height above the Raritan over USGS 3DEP elevation (approximation, not validated for New Brunswick)",
   ].filter(Boolean).join("<br>");

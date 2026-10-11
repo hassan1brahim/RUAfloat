@@ -21,7 +21,7 @@ const feature: Feature = {
     app.popup(pt, roadPanel({
       ei, router, grid: app.get("grid"), riseDm: app.rise(), stageFt: app.state.stageFt, baseFt: BASE_FT, mode: app.state.mode,
       forecast: live?.forecastSeries ?? [], forecastIssued: live?.forecastIssued ?? null, observedAt: live?.observed.validTime ?? null,
-      ida: river?.ida.series ?? [], evidence: obs.evidence(ei), observedClosed: obs.closed.has(ei),
+      ida: river?.ida.series ?? [], floodName: river?.ida.short ?? "the flood", evidence: obs.evidence(ei), observedClosed: obs.closed.has(ei),
       onRoute: !!app.maybe("guide")?.plan()?.edges.includes(ei), noaa: nwmNear ? nwmNear(pt.lon, pt.lat) : null,
     }));
     return true;
