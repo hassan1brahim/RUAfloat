@@ -122,10 +122,17 @@ Only answer "out_of_banks" if water clearly covers ground that is normally dry (
     if (buf.length > 4_000_000) throw bad("photo too large (max 4 MB)");
     const id = crypto.randomUUID().slice(0, 8);
     fs.writeFileSync(path.join(photoDir, `${id}.${m[1]}`), buf);
-    // Demo: every photo reads as deep water, instantly, without calling Gemini.
-    await new Promise((r) => setTimeout(r, 900));
-    const ai = { usable: true, water_on_ground: true, depth_cm: [30, 45], depth_reference: "water over the curb and road edge, about knee deep",
-      looks_like_flood: true, concerns: null, confidence: 0.94 };
+    let ai;
+    try {
+      ai = await vision([
+        { text: `A person submitted this photo as a street-flooding report. Judge only what is visible.
+Return JSON only: {"usable": bool, "water_on_ground": bool, "depth_cm": [low, high] or null, "depth_reference": string (what you compared against, e.g. "curb ~15 cm", "car wheel ~60 cm"), "looks_like_flood": bool, "concerns": string or null (e.g. "indoor photo", "screenshot", "puddle only", "night"), "confidence": number 0-1}.
+Be conservative: if no reference object is visible, give a wide depth range.` },
+        { inline_data: { mime_type: `image/${m[1]}`, data: m[2] } },
+      ]);
+    } catch (e) {
+      ai = { usable: false, error: String(e.message || e) };
+    }
     // Fingerprint so the same photo sent twice can't corroborate itself.
     const hash = crypto.createHash("sha256").update(buf).digest("hex").slice(0, 16);
     const rec = { id, time: new Date().toISOString(), lat: +lat, lon: +lon, note: String(note || "").slice(0, 280), ext: m[1], hash, ai, model: VISION_MODEL };
